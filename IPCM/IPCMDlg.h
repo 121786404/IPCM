@@ -34,12 +34,18 @@ protected:
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnOpenImg();
-    afx_msg void OnOpenCloseCam();
+    afx_msg void OnOpenCam();
+	afx_msg void OnOpenVideo();
 
 	Mat m_orgimg;
 	CRect m_display_rect;
 	VideoCapture m_capture;
-	CWinThread *pThreadCamPlay;
+	bool m_quit_video_play;
+	int m_video_play_wait_time;
+	CWinThread *m_pThreadVideoPlay;
+
 	void ShowImage(Mat& img, UINT ID);
+	void SystemClear();
 	
+	afx_msg void OnDestroy();
 };

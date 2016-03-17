@@ -51,8 +51,12 @@ END_MESSAGE_MAP()
 
 CIPCMDlg::CIPCMDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_IPCM_DIALOG, pParent)
+
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_video_play_wait_time = 0;
+	m_pThreadVideoPlay = NULL;
+	m_quit_video_play = false;
 }
 
 void CIPCMDlg::DoDataExchange(CDataExchange* pDX)
@@ -65,7 +69,9 @@ BEGIN_MESSAGE_MAP(CIPCMDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_COMMAND(ID_OPEN_IMG, &CIPCMDlg::OnOpenImg)
-	ON_COMMAND(ID_OPEN_CAM, &CIPCMDlg::OnOpenCloseCam)
+	ON_COMMAND(ID_OPEN_CAM, &CIPCMDlg::OnOpenCam)
+	ON_COMMAND(ID_OPEN_VIDEO, &CIPCMDlg::OnOpenVideo)
+	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
 
@@ -163,8 +169,11 @@ HCURSOR CIPCMDlg::OnQueryDragIcon()
 
 void CIPCMDlg::OnOpenImg()
 {
+	SystemClear();
+
 	CString strfilter;
-	strfilter.Append(_T("图片格式|*.jpg;*.png;*.bmp;"));
+	strfilter.Append(_T("图片文件(*.jpg;*png;*bmp)|*.jpg;*.png;*.bmp|"));
+	strfilter.Append(_T("All Files(*.*)|*.*||"));
 	LPCTSTR lpszfilter = strfilter;
 	CFileDialog dlg(TRUE, NULL, NULL, NULL, lpszfilter);
 
@@ -205,6 +214,8 @@ static void  FillBitmapInfo(BITMAPINFO* bmi, int width, int height, int channels
 
 void CIPCMDlg::ShowImage(Mat& img, UINT id)	
 {
+	
+	
 	CDC* pDC = GetDlgItem(id)->GetDC();		// 获得显示控件的 DC
 	HDC hDC = pDC->GetSafeHdc();				// 获取 HDC(设备句柄) 来进行绘图操作
 	
@@ -290,41 +301,94 @@ void CIPCMDlg::ShowImage(Mat& img, UINT id)
 	ReleaseDC(pDC);
 }
 
-static UINT ThreadCamPlay(LPVOID lpParam) {
+static UINT ThreadVideoPlay(LPVOID lpParam) {
 	CIPCMDlg *dlg = (CIPCMDlg *)lpParam;
 	
-	while(dlg->m_capture.isOpened())
+	while(1)
 	{
+		if (dlg->m_quit_video_play)
+			break;
+
 		Mat frame;  //定义一个Mat变量，用于存储每一帧的图像
 		dlg->m_capture >> frame;  //读取当前帧
 		//imshow("读取视频", frame);  //显示当前帧
 		dlg->ShowImage(frame, IDC_SHOW_IMAGE);
-		waitKey(30);  //延时30ms
+		Sleep(dlg->m_video_play_wait_time);
 		//TRACE("ThreadCamPlay runing \n");
 	}
-	dlg->pThreadCamPlay = NULL;
+	dlg->m_pThreadVideoPlay = NULL;
 	return 0;
 }
 
-void CIPCMDlg::OnOpenCloseCam()
+void CIPCMDlg::OnOpenCam()
 {
 	// TODO: Add your command handler code here
-	if (m_capture.isOpened())
+	SystemClear();
+
+	//if (m_capture.isOpened())
 	{
 		//TRACE("ThreadCamPlay release\n");
-		m_capture.release();
+		//m_capture.release();
 	
 		//Mat Z = Mat::zeros(m_display_rect.Height(), m_display_rect.Width(), CV_8U);
 		//ShowImage(Z, IDC_SHOW_IMAGE);
 		
 		//GetMenu()->GetSubMenu(0)->ModifyMenu(ID_OPEN_CAM, MF_STRING|MF_BYCOMMAND, NULL, _T("打开摄像头"));
-		GetMenu()->GetSubMenu(0)->ModifyMenu(2, MF_BYPOSITION, ID_OPEN_CAM, _T("打开摄像头"));
+		//GetMenu()->GetSubMenu(0)->ModifyMenu(2, MF_BYPOSITION, ID_OPEN_CAM, _T("打开摄像头"));
 	}
-	else
+	//else
 	{
 		m_capture.open(0);
-		pThreadCamPlay = AfxBeginThread(ThreadCamPlay, this);//开启线程
+		if (!m_capture.isOpened())  
+			return;
+		m_video_play_wait_time = 30;
+		m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
 		//GetMenu()->GetSubMenu(0)->ModifyMenu(ID_OPEN_CAM, MF_STRING|MF_BYCOMMAND, NULL, _T("关闭摄像头"));
-		GetMenu()->GetSubMenu(0)->ModifyMenu(2, MF_BYPOSITION, ID_OPEN_CAM, _T("关闭摄像头"));
+		//GetMenu()->GetSubMenu(0)->ModifyMenu(2, MF_BYPOSITION, ID_OPEN_CAM, _T("关闭摄像头"));
 	}
+}
+
+void CIPCMDlg::OnOpenVideo()
+{
+	SystemClear();
+
+	CString strfilter;
+	strfilter.Append(_T("视频文件(*.mp4;*avi)|*.mp4;*.avi|"));
+	strfilter.Append(_T("ES流(*.264;*265)|*.264;*.265|"));
+	strfilter.Append(_T("All Files(*.*)|*.*||"));
+	LPCTSTR lpszfilter = strfilter;
+	CFileDialog dlg(TRUE, NULL, NULL, NULL, lpszfilter);
+
+	dlg.m_ofn.lpstrTitle = _T("打开视频文件");
+	if (dlg.DoModal() != IDOK)
+		return;
+	CString FilePathName = dlg.GetPathName();
+
+	USES_CONVERSION;
+	m_capture.open(W2A(FilePathName));
+	if (!m_capture.isOpened())
+		return;
+	m_video_play_wait_time = 1000/(int)m_capture.get(CAP_PROP_FPS);
+	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
+}
+
+void CIPCMDlg::SystemClear()
+{
+	
+	while (m_pThreadVideoPlay)
+		Sleep(100);
+	
+	if (m_capture.isOpened())
+		m_capture.release();
+	
+	TRACE("SystemClear DONE!\n");
+}
+
+
+void CIPCMDlg::OnDestroy()
+{
+	CDialogEx::OnDestroy();
+	m_quit_video_play = true;
+	SystemClear();
+	_CrtDumpMemoryLeaks();
 }
