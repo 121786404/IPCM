@@ -65,6 +65,7 @@ BEGIN_MESSAGE_MAP(CIPCMDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_COMMAND(ID_OPEN_IMG, &CIPCMDlg::OnOpenImg)
+	ON_COMMAND(ID_OPEN_CAM, &CIPCMDlg::OnOpenCloseCam)
 END_MESSAGE_MAP()
 
 
@@ -103,6 +104,7 @@ BOOL CIPCMDlg::OnInitDialog()
 
 	::SetWindowPos(this->m_hWnd, HWND_BOTTOM, 0, 0, 1024, 700, SWP_NOZORDER);
 	CenterWindow();
+	//AllocConsole();
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -205,11 +207,13 @@ void CIPCMDlg::ShowImage(Mat& img, UINT id)
 {
 	CDC* pDC = GetDlgItem(id)->GetDC();		// 获得显示控件的 DC
 	HDC hDC = pDC->GetSafeHdc();				// 获取 HDC(设备句柄) 来进行绘图操作
-	CRect rect;
+	
 	Rect dst;
-		
-	GetDlgItem(id)->MoveWindow(CRect(0, 0, 512, 512));
-	GetDlgItem(id)->GetClientRect(&rect);
+	
+
+	//GetDlgItem(id)->MoveWindow(CRect(0, 0, 512, 512));
+	GetDlgItem(id)->MoveWindow(CRect(0, 0, 512, 512* img.rows/img.cols));
+	GetDlgItem(id)->GetClientRect(&m_display_rect);
 	// 图片置于控件中央
 	//int rw = rect.right - rect.left;			// 求出图片控件的宽和高
 	//int rh = rect.bottom - rect.top;
@@ -235,15 +239,15 @@ void CIPCMDlg::ShowImage(Mat& img, UINT id)
 	BITMAPINFO* bmi = (BITMAPINFO*)buffer;
 	FillBitmapInfo(bmi, img.cols, img.rows, img.channels(), 0);// img.origin);
 
-	if (rect.right - rect.left == img.cols && rect.bottom - rect.top == img.rows)
+	if (m_display_rect.right - m_display_rect.left == img.cols && m_display_rect.bottom - m_display_rect.top == img.rows)
 	{
 
 		::SetDIBitsToDevice(
 			hDC, 
-			rect.left,       // 指定目标矩形左上角的X轴坐标，按逻辑单位表示坐标
-			rect.top,       // 指字目标矩形左上角的Y轴坐标，按逻辑单位表示坐标
-			rect.right - rect.left,          // 指定DIB的宽度，按逻辑单位表示宽度
-			rect.bottom - rect.top,          // 指定DIB的高度，按逻辑单位表示高度
+			m_display_rect.left,       // 指定目标矩形左上角的X轴坐标，按逻辑单位表示坐标
+			m_display_rect.top,       // 指字目标矩形左上角的Y轴坐标，按逻辑单位表示坐标
+			m_display_rect.right - m_display_rect.left,          // 指定DIB的宽度，按逻辑单位表示宽度
+			m_display_rect.bottom - m_display_rect.top,          // 指定DIB的高度，按逻辑单位表示高度
 			0,           // 指定DIB位图左下角的X轴坐标，按逻辑单位表示坐标
 			0,           // 指定DIB位图左下角的Y轴坐标，按逻辑单位表示坐标
 			0,           // 指定DIB中的起始扫描线
@@ -275,12 +279,52 @@ void CIPCMDlg::ShowImage(Mat& img, UINT id)
 			// 删除像素。该模式删除所有消除的像素行，不保留其信息
 		}
 #endif
+
 		::StretchDIBits(
 			hDC,
-			rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
+			m_display_rect.left, m_display_rect.top, m_display_rect.right - m_display_rect.left, m_display_rect.bottom - m_display_rect.top,
 			0, 0, img.cols, img.rows,
 			img.data, bmi, DIB_RGB_COLORS, SRCCOPY);
 	}
 	
 	ReleaseDC(pDC);
+}
+
+static UINT ThreadCamPlay(LPVOID lpParam) {
+	CIPCMDlg *dlg = (CIPCMDlg *)lpParam;
+	
+	while(dlg->m_capture.isOpened())
+	{
+		Mat frame;  //定义一个Mat变量，用于存储每一帧的图像
+		dlg->m_capture >> frame;  //读取当前帧
+		//imshow("读取视频", frame);  //显示当前帧
+		dlg->ShowImage(frame, IDC_SHOW_IMAGE);
+		waitKey(30);  //延时30ms
+		//TRACE("ThreadCamPlay runing \n");
+	}
+	dlg->pThreadCamPlay = NULL;
+	return 0;
+}
+
+void CIPCMDlg::OnOpenCloseCam()
+{
+	// TODO: Add your command handler code here
+	if (m_capture.isOpened())
+	{
+		//TRACE("ThreadCamPlay release\n");
+		m_capture.release();
+	
+		//Mat Z = Mat::zeros(m_display_rect.Height(), m_display_rect.Width(), CV_8U);
+		//ShowImage(Z, IDC_SHOW_IMAGE);
+		
+		//GetMenu()->GetSubMenu(0)->ModifyMenu(ID_OPEN_CAM, MF_STRING|MF_BYCOMMAND, NULL, _T("打开摄像头"));
+		GetMenu()->GetSubMenu(0)->ModifyMenu(2, MF_BYPOSITION, ID_OPEN_CAM, _T("打开摄像头"));
+	}
+	else
+	{
+		m_capture.open(0);
+		pThreadCamPlay = AfxBeginThread(ThreadCamPlay, this);//开启线程
+		//GetMenu()->GetSubMenu(0)->ModifyMenu(ID_OPEN_CAM, MF_STRING|MF_BYCOMMAND, NULL, _T("关闭摄像头"));
+		GetMenu()->GetSubMenu(0)->ModifyMenu(2, MF_BYPOSITION, ID_OPEN_CAM, _T("关闭摄像头"));
+	}
 }
