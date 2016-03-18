@@ -3,7 +3,6 @@
 //
 
 #pragma once
-#include "D:\Program\opencv\install\include\opencv2\core\mat.hpp"
 
 
 // CIPCMDlg ¶Ô»°¿ò
@@ -40,12 +39,19 @@ public:
 	Mat m_orgimg;
 	CRect m_display_rect;
 	VideoCapture m_capture;
+
+	CCapture_FFMPEG m_capture_ffmpeg;
+	bool m_bUseFFmpeg;
 	bool m_quit_video_play;
+	int m_video_src;
+
 	int m_video_play_wait_time;
 	CWinThread *m_pThreadVideoPlay;
+	
+	void ShowImage(Image_Info* img, UINT ID);
 
-	void ShowImage(Mat& img, UINT ID);
 	void SystemClear();
 	
 	afx_msg void OnDestroy();
+	afx_msg void OnOpenStream();
 };

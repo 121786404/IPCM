@@ -5,12 +5,23 @@
 #include "stdafx.h"
 #include "IPCM.h"
 #include "IPCMDlg.h"
+#include "InputDlg.h"
 #include "afxdialogex.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+
+enum
+{
+	VIDEO_SOURCE_NONE = 0,
+	VIDEO_SOURCE_IMAGE = 1,
+	VIDEO_SOURCE_FILE = 2,
+	VIDEO_SOURCE_CAMERA = 3,
+	VIDEO_SOURCE_NETWORK = 4,
+	VIDEO_SOURCE_TITAL = 5
+};
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
@@ -57,6 +68,8 @@ CIPCMDlg::CIPCMDlg(CWnd* pParent /*=NULL*/)
 	m_video_play_wait_time = 0;
 	m_pThreadVideoPlay = NULL;
 	m_quit_video_play = false;
+	m_video_src = 0;
+	m_bUseFFmpeg = false;
 }
 
 void CIPCMDlg::DoDataExchange(CDataExchange* pDX)
@@ -72,6 +85,7 @@ BEGIN_MESSAGE_MAP(CIPCMDlg, CDialogEx)
 	ON_COMMAND(ID_OPEN_CAM, &CIPCMDlg::OnOpenCam)
 	ON_COMMAND(ID_OPEN_VIDEO, &CIPCMDlg::OnOpenVideo)
 	ON_WM_DESTROY()
+	ON_COMMAND(ID_OPEN_STREAM, &CIPCMDlg::OnOpenStream)
 END_MESSAGE_MAP()
 
 
@@ -111,6 +125,7 @@ BOOL CIPCMDlg::OnInitDialog()
 	::SetWindowPos(this->m_hWnd, HWND_BOTTOM, 0, 0, 1024, 700, SWP_NOZORDER);
 	CenterWindow();
 	//AllocConsole();
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -166,6 +181,14 @@ HCURSOR CIPCMDlg::OnQueryDragIcon()
 }
 
 
+static void ConvetMattoImage(Mat mat, Image_Info* img)
+{
+	img->data = mat.data;
+	//img->step  =
+	img->width = mat.cols;
+	img->height = mat.rows;
+	img->cn = mat.channels();
+}
 
 void CIPCMDlg::OnOpenImg()
 {
@@ -181,10 +204,13 @@ void CIPCMDlg::OnOpenImg()
 	if (dlg.DoModal() != IDOK)                    
 		return;
 	
+	m_video_src = VIDEO_SOURCE_IMAGE;
 	CString FilePathName = dlg.GetPathName();           
 	USES_CONVERSION;
 	m_orgimg = imread(W2A(FilePathName));
-	ShowImage(m_orgimg, IDC_SHOW_IMAGE);
+	Image_Info img;
+	ConvetMattoImage(m_orgimg, &img);
+	ShowImage(&img, IDC_SHOW_IMAGE);
 }
 
 static void  FillBitmapInfo(BITMAPINFO* bmi, int width, int height, int channels, int origin)
@@ -208,62 +234,49 @@ static void  FillBitmapInfo(BITMAPINFO* bmi, int width, int height, int channels
 		palette[i].rgbBlue = palette[i].rgbGreen = palette[i].rgbRed = (BYTE)i;
 		palette[i].rgbReserved = 0;
 	}
-
 }
 
 
-void CIPCMDlg::ShowImage(Mat& img, UINT id)	
+void CIPCMDlg::ShowImage(Image_Info* img, UINT id)	
 {
-	
-	
 	CDC* pDC = GetDlgItem(id)->GetDC();		// 获得显示控件的 DC
 	HDC hDC = pDC->GetSafeHdc();				// 获取 HDC(设备句柄) 来进行绘图操作
 	
 	Rect dst;
-	
+	int display_width, display_height;
+	if (img->width <= 540)
+	{
+		display_width = img->width;
+		display_height = img->height;
+	}
+	else
+	{
+		display_width  = 540;
+		display_height = 540 * img->height / img->width;
+	}
 
-	//GetDlgItem(id)->MoveWindow(CRect(0, 0, 512, 512));
-	GetDlgItem(id)->MoveWindow(CRect(0, 0, 512, 512* img.rows/img.cols));
+	GetDlgItem(id)->MoveWindow(CRect(0, 0, display_width, display_height));
 	GetDlgItem(id)->GetClientRect(&m_display_rect);
-	// 图片置于控件中央
-	//int rw = rect.right - rect.left;			// 求出图片控件的宽和高
-	//int rh = rect.bottom - rect.top;
-	//int iw = img.cols;						// 读取图片的宽和高
-	//int ih = img.rows;
-	//int tx = (int)(rw - iw) / 2;					// 使图片的显示位置正好在控件的正中
-	//int ty = (int)(rh - ih) / 2;
-	//SetRect(rect, tx, ty, tx + iw, ty + ih);
-	//rect.NormalizeRect();
 
-
-	//int from_x = 0;
-	//int from_y = 0;
-	//int bmp_w = img.cols, bmp_h = img.rows;
-	
-	//dst.x = rect.left;
-	//dst.y = rect.top;
-	//dst.width = rect.right - rect.left;
-	//dst.height = rect.bottom - rect.top;
-
-	assert(img.depth() == CV_8U);
+	//assert(img.depth() == CV_8U);
 	uchar buffer[sizeof(BITMAPINFOHEADER) + 1024];
 	BITMAPINFO* bmi = (BITMAPINFO*)buffer;
-	FillBitmapInfo(bmi, img.cols, img.rows, img.channels(), 0);// img.origin);
+	FillBitmapInfo(bmi, img->width, img->height, img->cn, 0);
 
-	if (m_display_rect.right - m_display_rect.left == img.cols && m_display_rect.bottom - m_display_rect.top == img.rows)
+	if (m_display_rect.Width() == img->width && m_display_rect.Height() == img->height)
 	{
 
 		::SetDIBitsToDevice(
 			hDC, 
 			m_display_rect.left,       // 指定目标矩形左上角的X轴坐标，按逻辑单位表示坐标
 			m_display_rect.top,       // 指字目标矩形左上角的Y轴坐标，按逻辑单位表示坐标
-			m_display_rect.right - m_display_rect.left,          // 指定DIB的宽度，按逻辑单位表示宽度
-			m_display_rect.bottom - m_display_rect.top,          // 指定DIB的高度，按逻辑单位表示高度
+			m_display_rect.Width(), 
+			m_display_rect.Height(),
 			0,           // 指定DIB位图左下角的X轴坐标，按逻辑单位表示坐标
 			0,           // 指定DIB位图左下角的Y轴坐标，按逻辑单位表示坐标
 			0,           // 指定DIB中的起始扫描线
-			img.rows,//MIN(img.rows, rect.bottom - rect.top),          // 指定参数lpvBits指向的数组中包含的DIB扫描线数目
-			img.data,    // 指向存储DIB颜色数据的字节类型数组的指针
+			img->height,//MIN(img.rows, rect.bottom - rect.top),          // 指定参数lpvBits指向的数组中包含的DIB扫描线数目
+			img->data,    // 指向存储DIB颜色数据的字节类型数组的指针
 			bmi,         // 指向BITMAPINFO结构的指针，该结构包含有关DIB的信息
 			DIB_RGB_COLORS);            // 指向BITMAPINFO结构中的成员bmiColors是否包含明确的RGB值或对调色板进行索引的值
 		
@@ -293,9 +306,9 @@ void CIPCMDlg::ShowImage(Mat& img, UINT id)
 
 		::StretchDIBits(
 			hDC,
-			m_display_rect.left, m_display_rect.top, m_display_rect.right - m_display_rect.left, m_display_rect.bottom - m_display_rect.top,
-			0, 0, img.cols, img.rows,
-			img.data, bmi, DIB_RGB_COLORS, SRCCOPY);
+			m_display_rect.left, m_display_rect.top, m_display_rect.Width(), m_display_rect.Height(),
+			0, 0, img->width ,img->height,
+			img->data, bmi, DIB_RGB_COLORS, SRCCOPY);
 	}
 	
 	ReleaseDC(pDC);
@@ -303,51 +316,53 @@ void CIPCMDlg::ShowImage(Mat& img, UINT id)
 
 static UINT ThreadVideoPlay(LPVOID lpParam) {
 	CIPCMDlg *dlg = (CIPCMDlg *)lpParam;
-	
-	while(1)
+	Image_Info img;
+	Mat frame; 
+
+	while (1)
 	{
 		if (dlg->m_quit_video_play)
-			break;
-
-		Mat frame;  //定义一个Mat变量，用于存储每一帧的图像
-		dlg->m_capture >> frame;  //读取当前帧
-		if (frame.empty())
-			break;
-		dlg->ShowImage(frame, IDC_SHOW_IMAGE);
+				break;
+		
+		if (dlg->m_video_src == VIDEO_SOURCE_NETWORK && dlg->m_bUseFFmpeg)
+		{
+			dlg->m_capture_ffmpeg.grabFrame();
+			dlg->m_capture_ffmpeg.retrieveFrame(&img);
+		}
+		else
+		{
+			dlg->m_capture >> frame;  //读取当前帧
+			if (frame.empty())
+				break;
+			
+			//IplImage frame;
+			//cvInitImageHeader(&frame, cvSize(img.width, img.height), 8, img.cn);
+			//cvSetData(&frame, img.data, img.step);
+			//TRACE("%s %d\n", __FUNCTION__, __LINE__);
+			ConvetMattoImage(frame, &img);
+		}
+		
+		dlg->ShowImage(&img, IDC_SHOW_IMAGE);
 		Sleep(dlg->m_video_play_wait_time);
-		//TRACE("ThreadCamPlay runing \n");
 	}
+
+
 	dlg->m_pThreadVideoPlay = NULL;
 	return 0;
 }
 
 void CIPCMDlg::OnOpenCam()
 {
-	// TODO: Add your command handler code here
 	SystemClear();
 
-	//if (m_capture.isOpened())
-	{
-		//TRACE("ThreadCamPlay release\n");
-		//m_capture.release();
-	
-		//Mat Z = Mat::zeros(m_display_rect.Height(), m_display_rect.Width(), CV_8U);
-		//ShowImage(Z, IDC_SHOW_IMAGE);
-		
-		//GetMenu()->GetSubMenu(0)->ModifyMenu(ID_OPEN_CAM, MF_STRING|MF_BYCOMMAND, NULL, _T("打开摄像头"));
-		//GetMenu()->GetSubMenu(0)->ModifyMenu(2, MF_BYPOSITION, ID_OPEN_CAM, _T("打开摄像头"));
-	}
-	//else
-	{
-		m_quit_video_play = false;
-		m_capture.open(0);
-		if (!m_capture.isOpened())  
-			return;
-		m_video_play_wait_time = 30;
-		m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
-		//GetMenu()->GetSubMenu(0)->ModifyMenu(ID_OPEN_CAM, MF_STRING|MF_BYCOMMAND, NULL, _T("关闭摄像头"));
-		//GetMenu()->GetSubMenu(0)->ModifyMenu(2, MF_BYPOSITION, ID_OPEN_CAM, _T("关闭摄像头"));
-	}
+	m_quit_video_play = false;
+	m_capture.open(0);
+	if (!m_capture.isOpened())  
+		return;
+
+	m_video_src = VIDEO_SOURCE_CAMERA;
+	m_video_play_wait_time = 30;
+	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
 }
 
 void CIPCMDlg::OnOpenVideo()
@@ -371,6 +386,7 @@ void CIPCMDlg::OnOpenVideo()
 	m_capture.open(W2A(FilePathName));
 	if (!m_capture.isOpened())
 		return;
+	m_video_src = VIDEO_SOURCE_FILE;
 	m_video_play_wait_time = 1000/(int)m_capture.get(CAP_PROP_FPS);
 	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
 }
@@ -383,13 +399,43 @@ void CIPCMDlg::SystemClear()
 	
 	if (m_capture.isOpened())
 		m_capture.release();
-	
-	//TRACE("SystemClear DONE!\n");
 }
-
 
 void CIPCMDlg::OnDestroy()
 {
 	CDialogEx::OnDestroy();
 	SystemClear();
+}
+
+void CIPCMDlg::OnOpenStream()
+{
+	SystemClear();
+	
+	// TODO: Add your command handler code here
+	CInputDlg m_dlg;
+	if (m_dlg.DoModal() != IDOK)
+		return;
+
+	//CString FilePathName = m_dlg.GetInputString();
+	//CString FilePathName("rtsp://172.21.16.64/video0");
+	//CString FilePathName("rtsp://172.21.16.112/Mstar_IPCM.264");
+	CString FilePathName("rtsp://172.21.16.112/fukua.264");
+	m_quit_video_play = false;
+	USES_CONVERSION;
+	
+	if (m_bUseFFmpeg)
+	{
+		if (!m_capture_ffmpeg.open(W2A(FilePathName)))
+			return;
+	}
+	else
+	{
+		m_capture.open(W2A(FilePathName));
+		if (!m_capture.isOpened())
+			return;
+	}
+
+	m_video_src = VIDEO_SOURCE_NETWORK;
+	m_video_play_wait_time = 30;
+	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
 }

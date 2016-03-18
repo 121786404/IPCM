@@ -75,23 +75,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\Program\opencv\install\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Program\opencv\install\x86\vc14\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Program\ffmpeg\include;D:\Program\opencv\build\install\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Program\opencv\build\install\x86\vc14\lib;D:\Program\ffmpeg\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\Program\opencv\install\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Program\opencv\install\x86\vc14\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\Program\opencv\install\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Program\opencv\install\x86\vc14\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\Program\ffmpeg\include;D:\Program\opencv\build\install\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Program\opencv\build\install\x86\vc14\lib;D:\Program\ffmpeg\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\Program\opencv\install\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\Program\opencv\install\x86\vc14\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -103,7 +103,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opencv_aruco310d.lib;opencv_bgsegm310d.lib;opencv_bioinspired310d.lib;opencv_calib3d310d.lib;opencv_ccalib310d.lib;opencv_core310d.lib;opencv_datasets310d.lib;opencv_dnn310d.lib;opencv_dpm310d.lib;opencv_face310d.lib;opencv_features2d310d.lib;opencv_flann310d.lib;opencv_fuzzy310d.lib;opencv_highgui310d.lib;opencv_imgcodecs310d.lib;opencv_imgproc310d.lib;opencv_line_descriptor310d.lib;opencv_ml310d.lib;opencv_objdetect310d.lib;opencv_optflow310d.lib;opencv_photo310d.lib;opencv_plot310d.lib;opencv_reg310d.lib;opencv_rgbd310d.lib;opencv_saliency310d.lib;opencv_shape310d.lib;opencv_stereo310d.lib;opencv_stitching310d.lib;opencv_structured_light310d.lib;opencv_superres310d.lib;opencv_surface_matching310d.lib;opencv_text310d.lib;opencv_tracking310d.lib;opencv_video310d.lib;opencv_videoio310d.lib;opencv_videostab310d.lib;opencv_ximgproc310d.lib;opencv_xobjdetect310d.lib;opencv_xphoto310d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_calib3d310d.lib;opencv_core310d.lib;opencv_features2d310d.lib;opencv_flann310d.lib;opencv_highgui310d.lib;opencv_imgcodecs310d.lib;opencv_imgproc310d.lib;opencv_ml310d.lib;opencv_objdetect310d.lib;opencv_photo310d.lib;opencv_shape310d.lib;opencv_stitching310d.lib;opencv_superres310d.lib;opencv_video310d.lib;opencv_videoio310d.lib;opencv_videostab310d.lib;%(AdditionalDependencies);avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swresample.lib;swscale.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -153,7 +153,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opencv_aruco310.lib;opencv_bgsegm310.lib;opencv_bioinspired310.lib;opencv_calib3d310.lib;opencv_ccalib310.lib;opencv_core310.lib;opencv_datasets310.lib;opencv_dnn310.lib;opencv_dpm310.lib;opencv_face310.lib;opencv_features2d310.lib;opencv_flann310.lib;opencv_fuzzy310.lib;opencv_highgui310.lib;opencv_imgcodecs310.lib;opencv_imgproc310.lib;opencv_line_descriptor310.lib;opencv_ml310.lib;opencv_objdetect310.lib;opencv_optflow310.lib;opencv_photo310.lib;opencv_plot310.lib;opencv_reg310.lib;opencv_rgbd310.lib;opencv_saliency310.lib;opencv_shape310.lib;opencv_stereo310.lib;opencv_stitching310.lib;opencv_structured_light310.lib;opencv_superres310.lib;opencv_surface_matching310.lib;opencv_text310.lib;opencv_tracking310.lib;opencv_video310.lib;opencv_videoio310.lib;opencv_videostab310.lib;opencv_ximgproc310.lib;opencv_xobjdetect310.lib;opencv_xphoto310.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_aruco310.lib;opencv_bgsegm310.lib;opencv_bioinspired310.lib;opencv_calib3d310.lib;opencv_ccalib310.lib;opencv_core310.lib;opencv_datasets310.lib;opencv_dnn310.lib;opencv_dpm310.lib;opencv_face310.lib;opencv_features2d310.lib;opencv_flann310.lib;opencv_fuzzy310.lib;opencv_highgui310.lib;opencv_imgcodecs310.lib;opencv_imgproc310.lib;opencv_line_descriptor310.lib;opencv_ml310.lib;opencv_objdetect310.lib;opencv_optflow310.lib;opencv_photo310.lib;opencv_plot310.lib;opencv_reg310.lib;opencv_rgbd310.lib;opencv_saliency310.lib;opencv_shape310.lib;opencv_stereo310.lib;opencv_stitching310.lib;opencv_structured_light310.lib;opencv_superres310.lib;opencv_surface_matching310.lib;opencv_text310.lib;opencv_tracking310.lib;opencv_video310.lib;opencv_videoio310.lib;opencv_videostab310.lib;opencv_ximgproc310.lib;opencv_xobjdetect310.lib;opencv_xphoto310.lib;%(AdditionalDependencies);avcodec.lib;avdevice.lib;avfilter.lib;avformat.lib;avutil.lib;postproc.lib;swresample.lib;swscale.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -197,6 +197,8 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FFMPEG_Capture.h" />
+    <ClInclude Include="InputDlg.h" />
     <ClInclude Include="IPCM.h" />
     <ClInclude Include="IPCMDlg.h" />
     <ClInclude Include="Resource.h" />
@@ -204,6 +206,8 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="FFMPEG_Capture.cpp" />
+    <ClCompile Include="InputDlg.cpp" />
     <ClCompile Include="IPCM.cpp" />
     <ClCompile Include="IPCMDlg.cpp" />
     <ClCompile Include="stdafx.cpp">

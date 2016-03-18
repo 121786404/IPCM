@@ -58,10 +58,31 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-
-
 using namespace cv;
 
+//FFmpeg
+extern "C"
+{
+#include "libavutil/avstring.h"
+	//#include "libavutil/colorspace.h"
+#include "libavutil/mathematics.h"
+#include "libavutil/pixdesc.h"
+#include "libavutil/imgutils.h"
+#include "libavutil/dict.h"
+#include "libavutil/parseutils.h"
+#include "libavutil/samplefmt.h"
+#include "libavutil/avassert.h"
+#include "libavutil/time.h"
+	//#include "libavutil/colorspace.h"
+#include "libavformat/avformat.h"
+#include "libavdevice/avdevice.h"
+#include "libswscale/swscale.h"
+#include "libavutil/opt.h"
+#include "libavcodec/avfft.h"
+#include "libswresample/swresample.h"
+}
 
-#define IMAGE_WIDTH 256
-#define IMAGE_HEIGHT 256
+
+
+
+#include "FFMPEG_Capture.h"
