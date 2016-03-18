@@ -51,10 +51,10 @@
 #endif
 #endif
 
-//#ifdef _DEBUG
-#define _CRTDBG_MAP_ALLO
+#if 0//def _DEBUG
+#define _CRTDBG_MAP_ALLOC 
 #include <crtdbg.h>
-//#endif
+#endif
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>

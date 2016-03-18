@@ -381,7 +381,7 @@ void CIPCMDlg::SystemClear()
 	if (m_capture.isOpened())
 		m_capture.release();
 	
-	TRACE("SystemClear DONE!\n");
+	//TRACE("SystemClear DONE!\n");
 }
 
 
@@ -390,5 +390,4 @@ void CIPCMDlg::OnDestroy()
 	CDialogEx::OnDestroy();
 	m_quit_video_play = true;
 	SystemClear();
-	_CrtDumpMemoryLeaks();
 }
