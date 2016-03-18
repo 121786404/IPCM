@@ -311,7 +311,8 @@ static UINT ThreadVideoPlay(LPVOID lpParam) {
 
 		Mat frame;  //定义一个Mat变量，用于存储每一帧的图像
 		dlg->m_capture >> frame;  //读取当前帧
-		//imshow("读取视频", frame);  //显示当前帧
+		if (frame.empty())
+			break;
 		dlg->ShowImage(frame, IDC_SHOW_IMAGE);
 		Sleep(dlg->m_video_play_wait_time);
 		//TRACE("ThreadCamPlay runing \n");
@@ -338,6 +339,7 @@ void CIPCMDlg::OnOpenCam()
 	}
 	//else
 	{
+		m_quit_video_play = false;
 		m_capture.open(0);
 		if (!m_capture.isOpened())  
 			return;
@@ -364,6 +366,7 @@ void CIPCMDlg::OnOpenVideo()
 		return;
 	CString FilePathName = dlg.GetPathName();
 
+	m_quit_video_play = false;
 	USES_CONVERSION;
 	m_capture.open(W2A(FilePathName));
 	if (!m_capture.isOpened())
@@ -374,7 +377,7 @@ void CIPCMDlg::OnOpenVideo()
 
 void CIPCMDlg::SystemClear()
 {
-	
+	m_quit_video_play = true;
 	while (m_pThreadVideoPlay)
 		Sleep(100);
 	
@@ -388,6 +391,5 @@ void CIPCMDlg::SystemClear()
 void CIPCMDlg::OnDestroy()
 {
 	CDialogEx::OnDestroy();
-	m_quit_video_play = true;
 	SystemClear();
 }
