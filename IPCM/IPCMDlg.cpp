@@ -70,6 +70,7 @@ CIPCMDlg::CIPCMDlg(CWnd* pParent /*=NULL*/)
 	m_quit_video_play = false;
 	m_video_src = 0;
 	m_bUseFFmpeg = false;
+	m_bUseFFmpeg = true;
 }
 
 void CIPCMDlg::DoDataExchange(CDataExchange* pDX)

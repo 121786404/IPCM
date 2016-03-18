@@ -25,6 +25,12 @@ struct Image_Info
 	int cn;
 };
 
+struct AVInterruptCallbackMetadata
+{
+	timespec value;
+	unsigned int timeout_after_ms;
+	int timeout;
+};
 
 class CCapture_FFMPEG
 {
@@ -73,4 +79,5 @@ private:
 	*/
 	char * filename;
 	AVDictionary *dict;
+	AVInterruptCallbackMetadata interrupt_metadata;
 };

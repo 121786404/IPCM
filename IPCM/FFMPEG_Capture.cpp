@@ -8,6 +8,124 @@ static int get_number_of_cpus(void)
 	return (int)sysinfo.dwNumberOfProcessors;
 }
 
+
+#define LIBAVFORMAT_INTERRUPT_TIMEOUT_MS 5000
+
+static
+inline LARGE_INTEGER get_filetime_offset()
+{
+	SYSTEMTIME s;
+	FILETIME f;
+	LARGE_INTEGER t;
+
+	s.wYear = 1970;
+	s.wMonth = 1;
+	s.wDay = 1;
+	s.wHour = 0;
+	s.wMinute = 0;
+	s.wSecond = 0;
+	s.wMilliseconds = 0;
+	SystemTimeToFileTime(&s, &f);
+	t.QuadPart = f.dwHighDateTime;
+	t.QuadPart <<= 32;
+	t.QuadPart |= f.dwLowDateTime;
+	return t;
+}
+
+static
+inline void get_monotonic_time(timespec *tv)
+{
+	LARGE_INTEGER           t;
+	FILETIME				f;
+	double                  microseconds;
+	static LARGE_INTEGER    offset;
+	static double           frequencyToMicroseconds;
+	static int              initialized = 0;
+	static BOOL             usePerformanceCounter = 0;
+
+	if (!initialized)
+	{
+		LARGE_INTEGER performanceFrequency;
+		initialized = 1;
+		usePerformanceCounter = QueryPerformanceFrequency(&performanceFrequency);
+		if (usePerformanceCounter)
+		{
+			QueryPerformanceCounter(&offset);
+			frequencyToMicroseconds = (double)performanceFrequency.QuadPart / 1000000.;
+		}
+		else
+		{
+			offset = get_filetime_offset();
+			frequencyToMicroseconds = 10.;
+		}
+	}
+
+	if (usePerformanceCounter)
+	{
+		QueryPerformanceCounter(&t);
+	}
+	else {
+		GetSystemTimeAsFileTime(&f);
+		t.QuadPart = f.dwHighDateTime;
+		t.QuadPart <<= 32;
+		t.QuadPart |= f.dwLowDateTime;
+	}
+
+	t.QuadPart -= offset.QuadPart;
+	microseconds = (double)t.QuadPart / frequencyToMicroseconds;
+	t.QuadPart = (LONGLONG)microseconds;
+	tv->tv_sec = t.QuadPart / 1000000;
+	tv->tv_nsec = (t.QuadPart % 1000000) * 1000;
+}
+
+static
+inline timespec get_monotonic_time_diff(timespec start, timespec end)
+{
+    timespec temp;
+    if (end.tv_nsec - start.tv_nsec < 0)
+    {
+        temp.tv_sec = end.tv_sec - start.tv_sec - 1;
+        temp.tv_nsec = 1000000000 + end.tv_nsec - start.tv_nsec;
+    }
+    else
+    {
+        temp.tv_sec = end.tv_sec - start.tv_sec;
+        temp.tv_nsec = end.tv_nsec - start.tv_nsec;
+    }
+    return temp;
+}
+
+static
+inline double get_monotonic_time_diff_ms(timespec time1, timespec time2)
+{
+    timespec delta = get_monotonic_time_diff(time1, time2);
+    double milliseconds = delta.tv_sec * 1000 + (double)delta.tv_nsec / 1000000.0;
+
+    return milliseconds;
+}
+
+static
+inline void _opencv_ffmpeg_free(void** ptr)
+{
+	if (*ptr) free(*ptr);
+	*ptr = 0;
+}
+
+static
+inline int _opencv_ffmpeg_interrupt_callback(void *ptr)
+{
+	AVInterruptCallbackMetadata* metadata = (AVInterruptCallbackMetadata*)ptr;
+	assert(metadata);
+
+	timespec now;
+	get_monotonic_time(&now);
+
+	metadata->timeout = get_monotonic_time_diff_ms(metadata->value, now) > metadata->timeout_after_ms;
+
+	return metadata->timeout ? -1 : 0;
+}
+
+
 CCapture_FFMPEG::CCapture_FFMPEG()
 {
 	init();
@@ -91,6 +209,16 @@ bool CCapture_FFMPEG::open(const char* _filename)
 
 	close();
 
+
+    /* interrupt callback */
+    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_TIMEOUT_MS;
+    get_monotonic_time(&interrupt_metadata.value);
+
+    ic = avformat_alloc_context();
+    ic->interrupt_callback.callback = _opencv_ffmpeg_interrupt_callback;
+    ic->interrupt_callback.opaque = &interrupt_metadata;
+
+
 	av_dict_set(&dict, "rtsp_transport", "tcp", 0);
 	int err = avformat_open_input(&ic, _filename, NULL, &dict);
 
@@ -163,6 +291,11 @@ bool CCapture_FFMPEG::grabFrame()
 	while (!valid)
 	{
 		av_packet_unref(&packet);
+        if (interrupt_metadata.timeout)
+        {
+            valid = false;
+            break;
+        }
 		int ret = av_read_frame(ic, &packet);
 		
 		if (ret == AVERROR(EAGAIN)) continue;
@@ -187,6 +320,7 @@ bool CCapture_FFMPEG::grabFrame()
 				picture_pts = packet.pts != AV_NOPTS_VALUE && packet.pts != 0 ? packet.pts : packet.dts;
 			frame_number++;
 			valid = true;
+            get_monotonic_time(&interrupt_metadata.value);
 		}
 		else
 		{
