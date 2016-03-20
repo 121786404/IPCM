@@ -419,8 +419,9 @@ void CIPCMDlg::OnOpenStream()
 
 	//CString FilePathName = m_dlg.GetInputString();
 	//CString FilePathName("rtsp://172.21.16.64/video0");
-	//CString FilePathName("rtsp://172.21.16.112/Mstar_IPCM.264");
-	CString FilePathName("rtsp://172.21.16.112/fukua.264");
+	//CString FilePathName("rtsp://172.21.16.112/IPCM.264");
+	CString FilePathName("rtsp://192.168.199.206/IPCM.264");
+	//CString FilePathName("rtsp://172.21.16.112/fukua.264");
 	m_quit_video_play = false;
 	USES_CONVERSION;
 	
