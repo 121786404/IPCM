@@ -468,7 +468,7 @@ double CCapture_FFMPEG::getProperty(int property_id) const
 	case FFMPEG_CAP_PROP_POS_MSEC:
 		return 1000.0*(double)frame_number / get_fps();
 	case FFMPEG_CAP_PROP_POS_FRAMES:
-		return (double)frame_number;
+		return (double)ic->streams[video_stream]->nb_frames;
 	case FFMPEG_CAP_PROP_POS_AVI_RATIO:
 		return r2d(ic->streams[video_stream]->time_base);
 	case FFMPEG_CAP_PROP_FRAME_WIDTH:

@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "afxwin.h"
 
 
 // CIPCMDlg ¶Ô»°¿ò
@@ -49,9 +50,26 @@ public:
 	CWinThread *m_pThreadVideoPlay;
 	
 	void ShowImage(Image_Info* img, UINT ID);
+	void SetStreamInfo();
 
 	void SystemClear();
 	
+
 	afx_msg void OnClose();
 	afx_msg void OnOpenStream();
+
+
+	CEdit m_input;
+
+	//CEdit	m_pix_fmt;
+	CEdit	m_frame_num;
+	CEdit	m_video_size;
+	CEdit	m_fps;
+	//CEdit	m_audio_decoder_name;
+	//CEdit	m_audio_sample_rate;
+	//CEdit	m_audio_channels;
+	//CEdit	m_aqsize;
+	//CEdit	m_vqsize;
+	//CEdit	m_avdiff;
+	afx_msg void OnBnClickedNalInfo();
 };

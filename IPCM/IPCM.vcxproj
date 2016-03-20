@@ -201,6 +201,7 @@
     <ClInclude Include="InputDlg.h" />
     <ClInclude Include="IPCM.h" />
     <ClInclude Include="IPCMDlg.h" />
+    <ClInclude Include="NALINFO.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -210,6 +211,7 @@
     <ClCompile Include="InputDlg.cpp" />
     <ClCompile Include="IPCM.cpp" />
     <ClCompile Include="IPCMDlg.cpp" />
+    <ClCompile Include="NALINFO.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

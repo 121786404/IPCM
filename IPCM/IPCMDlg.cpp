@@ -76,6 +76,28 @@ CIPCMDlg::CIPCMDlg(CWnd* pParent /*=NULL*/)
 void CIPCMDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	//  DDX_Control(pDX, IDC_DECODER_TYPE, m_decoder_type);
+	//DDX_Control(pDX, IDC_PIX_FMT, m_pix_fmt);
+	DDX_Control(pDX, IDC_FRAME_NUM, m_frame_num);
+	DDX_Control(pDX, IDC_VIDEO_SIZE, m_video_size);
+	//DDX_Control(pDX, IDC_BITRATE, m_bitrate);
+	//DDX_Control(pDX, IDC_EXTENTION, m_extention);
+	//DDX_Control(pDX, IDC_METADATA, m_metadata);
+	DDX_Control(pDX, IDC_FPS, m_fps);
+	//DDX_Control(pDX, IDC_TIMELONG, m_timelong);
+	//DDX_Control(pDX, IDC_INPUT_FORMAT, m_input_format);
+	//DDX_Control(pDX, IDC_INPUT_PROTOCOL, m_input_protocol);
+	//DDX_Control(pDX, IDC_AUDIO_DEC_NAME, m_audio_decoder_name);
+	//DDX_Control(pDX, IDC_SAMPLE_RATE, m_audio_sample_rate);
+	//DDX_Control(pDX, IDC_INPUTURL, m_inputurl);
+	//DDX_Control(pDX, IDC_CHANNELS, m_audio_channels);
+	//DDX_Control(pDX, IDC_PLAY_PROGRESS, m_playprogress);
+	//DDX_Control(pDX, IDC_AQ_SIZE, m_aqsize);
+	//DDX_Control(pDX, IDC_VQ_SIZE, m_vqsize);
+	//DDX_Control(pDX, IDC_DURATION, m_duration);
+	//DDX_Control(pDX, IDC_CURRENT_CLOCK, m_currentclock);
+	//DDX_Control(pDX, IDC_AV_DIFF, m_avdiff);
+
 }
 
 BEGIN_MESSAGE_MAP(CIPCMDlg, CDialogEx)
@@ -87,6 +109,7 @@ BEGIN_MESSAGE_MAP(CIPCMDlg, CDialogEx)
 	ON_COMMAND(ID_OPEN_VIDEO, &CIPCMDlg::OnOpenVideo)
 	ON_WM_DESTROY()
 	ON_COMMAND(ID_OPEN_STREAM, &CIPCMDlg::OnOpenStream)
+	ON_BN_CLICKED(IDC_NAL_INFO, &CIPCMDlg::OnBnClickedNalInfo)
 END_MESSAGE_MAP()
 
 
@@ -440,12 +463,32 @@ void CIPCMDlg::OnOpenStream()
 			return;
 		}
 	}
-
+	SetStreamInfo();
 	m_video_src = VIDEO_SOURCE_NETWORK;
 	m_video_play_wait_time = 30;
 	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//¿ªÆôÏß³Ì
 }
 
+void CIPCMDlg::SetStreamInfo()
+{
+	if (m_bUseFFmpeg)
+	{
+		double frame_count = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_FRAME_COUNT);
+		double pos_frames  = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_POS_FRAMES);
+		double fps = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_FPS);
+		double fourcc = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_FOURCC);
+		double width = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_FRAME_WIDTH);
+		double height = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_FRAME_HEIGHT);
+		double sar_num = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_SAR_NUM);
+		double sar_den = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_SAR_DEN);
+
+
+		CString tmp;
+		tmp.Format(_T("%d"), (int)frame_count);		   m_frame_num.SetWindowText(tmp);
+		tmp.Format(_T("%d x %d "), (int)width, (int)height);   m_video_size.SetWindowText(tmp);
+		tmp.Format(_T("%5.2ffps"), fps);					       m_fps.SetWindowText(tmp);
+	}
+}
 
 void CIPCMDlg::SystemClear()
 {
@@ -465,4 +508,11 @@ void CIPCMDlg::OnClose()
 {
 	SystemClear();
 	CDialogEx::OnClose();
+}
+
+
+void CIPCMDlg::OnBnClickedNalInfo()
+{
+	// TODO: Add your control notification handler code here
+	//videodecode->ShowWindow(SW_SHOW);
 }
