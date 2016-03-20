@@ -191,28 +191,6 @@ static void ConvetMattoImage(Mat mat, Image_Info* img)
 	img->cn = mat.channels();
 }
 
-void CIPCMDlg::OnOpenImg()
-{
-	SystemClear();
-
-	CString strfilter;
-	strfilter.Append(_T("图片文件(*.jpg;*png;*bmp)|*.jpg;*.png;*.bmp|"));
-	strfilter.Append(_T("All Files(*.*)|*.*||"));
-	LPCTSTR lpszfilter = strfilter;
-	CFileDialog dlg(TRUE, NULL, NULL, NULL, lpszfilter);
-
-	dlg.m_ofn.lpstrTitle = _T("打开图片文件");    
-	if (dlg.DoModal() != IDOK)                    
-		return;
-	
-	m_video_src = VIDEO_SOURCE_IMAGE;
-	CString FilePathName = dlg.GetPathName();           
-	USES_CONVERSION;
-	m_orgimg = imread(W2A(FilePathName));
-	Image_Info img;
-	ConvetMattoImage(m_orgimg, &img);
-	ShowImage(&img, IDC_SHOW_IMAGE);
-}
 
 static void  FillBitmapInfo(BITMAPINFO* bmi, int width, int height, int channels, int origin)
 {
@@ -261,8 +239,7 @@ void CIPCMDlg::ShowImage(Image_Info* img, UINT id)
 
 	//assert(img.depth() == CV_8U);
 	uchar buffer[sizeof(BITMAPINFOHEADER) + 1024];
-	BITMAPINFO* bmi = (BITMAPINFO*)buffer;
-	FillBitmapInfo(bmi, img->width, img->height, img->cn, 0);
+	FillBitmapInfo((BITMAPINFO*)buffer, img->width, img->height, img->cn, 0);
 
 	if (m_display_rect.Width() == img->width && m_display_rect.Height() == img->height)
 	{
@@ -278,7 +255,7 @@ void CIPCMDlg::ShowImage(Image_Info* img, UINT id)
 			0,           // 指定DIB中的起始扫描线
 			img->height,//MIN(img.rows, rect.bottom - rect.top),          // 指定参数lpvBits指向的数组中包含的DIB扫描线数目
 			img->data,    // 指向存储DIB颜色数据的字节类型数组的指针
-			bmi,         // 指向BITMAPINFO结构的指针，该结构包含有关DIB的信息
+			(BITMAPINFO*)buffer,         // 指向BITMAPINFO结构的指针，该结构包含有关DIB的信息
 			DIB_RGB_COLORS);            // 指向BITMAPINFO结构中的成员bmiColors是否包含明确的RGB值或对调色板进行索引的值
 		
 	}
@@ -309,7 +286,7 @@ void CIPCMDlg::ShowImage(Image_Info* img, UINT id)
 			hDC,
 			m_display_rect.left, m_display_rect.top, m_display_rect.Width(), m_display_rect.Height(),
 			0, 0, img->width ,img->height,
-			img->data, bmi, DIB_RGB_COLORS, SRCCOPY);
+			img->data, (BITMAPINFO*)buffer, DIB_RGB_COLORS, SRCCOPY);
 	}
 	
 	ReleaseDC(pDC);
@@ -352,18 +329,33 @@ static UINT ThreadVideoPlay(LPVOID lpParam) {
 	return 0;
 }
 
-void CIPCMDlg::OnOpenCam()
+
+void CIPCMDlg::OnOpenImg()
 {
 	SystemClear();
 
-	m_quit_video_play = false;
-	m_capture.open(0);
-	if (!m_capture.isOpened())  
+	CString strfilter;
+	strfilter.Append(_T("图片文件(*.jpg;*png;*bmp)|*.jpg;*.png;*.bmp|"));
+	strfilter.Append(_T("All Files(*.*)|*.*||"));
+	LPCTSTR lpszfilter = strfilter;
+	CFileDialog dlg(TRUE, NULL, NULL, NULL, lpszfilter);
+
+	dlg.m_ofn.lpstrTitle = _T("打开图片文件");
+	if (dlg.DoModal() != IDOK)
 		return;
 
-	m_video_src = VIDEO_SOURCE_CAMERA;
-	m_video_play_wait_time = 30;
-	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
+	m_video_src = VIDEO_SOURCE_IMAGE;
+	CString FilePathName = dlg.GetPathName();
+	USES_CONVERSION;
+	m_orgimg = imread(W2A(FilePathName));
+	if(m_orgimg.empty())
+	{
+		MessageBox(_T("打开图像文件"), _T("错误"), MB_ICONEXCLAMATION);
+		return;
+	}
+	Image_Info img;
+	ConvetMattoImage(m_orgimg, &img);
+	ShowImage(&img, IDC_SHOW_IMAGE);
 }
 
 void CIPCMDlg::OnOpenVideo()
@@ -371,8 +363,8 @@ void CIPCMDlg::OnOpenVideo()
 	SystemClear();
 
 	CString strfilter;
-	strfilter.Append(_T("视频文件(*.mp4;*avi)|*.mp4;*.avi|"));
 	strfilter.Append(_T("ES流(*.264;*265)|*.264;*.265|"));
+	strfilter.Append(_T("视频文件(*.mp4;*avi)|*.mp4;*.avi|"));
 	strfilter.Append(_T("All Files(*.*)|*.*||"));
 	LPCTSTR lpszfilter = strfilter;
 	CFileDialog dlg(TRUE, NULL, NULL, NULL, lpszfilter);
@@ -386,26 +378,31 @@ void CIPCMDlg::OnOpenVideo()
 	USES_CONVERSION;
 	m_capture.open(W2A(FilePathName));
 	if (!m_capture.isOpened())
+	{
+		MessageBox(_T("打开视频流失败"), _T("错误"), MB_ICONEXCLAMATION);
 		return;
+	}
+
 	m_video_src = VIDEO_SOURCE_FILE;
-	m_video_play_wait_time = 1000/(int)m_capture.get(CAP_PROP_FPS);
-	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
+	m_video_play_wait_time = 1000 / (int)m_capture.get(CAP_PROP_FPS);
+	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);
 }
 
-void CIPCMDlg::SystemClear()
+void CIPCMDlg::OnOpenCam()
 {
-	m_quit_video_play = true;
-	while (m_pThreadVideoPlay)
-		Sleep(100);
-	
-	if (m_capture.isOpened())
-		m_capture.release();
-}
-
-void CIPCMDlg::OnDestroy()
-{
-	CDialogEx::OnDestroy();
 	SystemClear();
+
+	m_quit_video_play = false;
+	m_capture.open(0);
+	if (!m_capture.isOpened())
+	{
+		MessageBox(_T("打开摄像头失败"),_T("错误"), MB_ICONEXCLAMATION);
+		return;
+	}
+
+	m_video_src = VIDEO_SOURCE_CAMERA;
+	m_video_play_wait_time = 30;
+	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
 }
 
 void CIPCMDlg::OnOpenStream()
@@ -427,17 +424,45 @@ void CIPCMDlg::OnOpenStream()
 	
 	if (m_bUseFFmpeg)
 	{
-		if (!m_capture_ffmpeg.open(W2A(FilePathName)))
+		m_capture_ffmpeg.open(W2A(FilePathName));
+		if (!m_capture_ffmpeg.isOpened())
+		{
+			MessageBox(_T("打开视频流"), _T("错误"), MB_ICONEXCLAMATION);
 			return;
+		}
 	}
 	else
 	{
 		m_capture.open(W2A(FilePathName));
 		if (!m_capture.isOpened())
+		{
+			MessageBox(_T("打开视频流"), _T("错误"), MB_ICONEXCLAMATION);
 			return;
+		}
 	}
 
 	m_video_src = VIDEO_SOURCE_NETWORK;
 	m_video_play_wait_time = 30;
 	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
+}
+
+
+void CIPCMDlg::SystemClear()
+{
+	m_quit_video_play = true;
+	while (m_pThreadVideoPlay)
+	{
+		Sleep(100);
+	}
+	if (m_capture.isOpened())
+		m_capture.release();
+	
+	if (m_bUseFFmpeg && m_capture_ffmpeg.isOpened())
+		m_capture_ffmpeg.release();
+}
+
+void CIPCMDlg::OnClose()
+{
+	SystemClear();
+	CDialogEx::OnClose();
 }

@@ -52,6 +52,6 @@ public:
 
 	void SystemClear();
 	
-	afx_msg void OnDestroy();
+	afx_msg void OnClose();
 	afx_msg void OnOpenStream();
 };

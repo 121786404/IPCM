@@ -157,12 +157,11 @@ void CCapture_FFMPEG::init()
 	dict = NULL;
 	out_width = -1;
 	out_height = -1;
-	av_register_all();
-	avformat_network_init();
+	is_opened = false;
 }
 
 
-void CCapture_FFMPEG::close()
+void CCapture_FFMPEG::release()
 {
 	if (img_convert_ctx)
 	{
@@ -205,10 +204,10 @@ void CCapture_FFMPEG::close()
 bool CCapture_FFMPEG::open(const char* _filename)
 {
 	unsigned i;
-	bool valid = false;
+	is_opened = false;
 
-	close();
-
+	av_register_all();
+	avformat_network_init();
 
     /* interrupt callback */
     interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_TIMEOUT_MS;
@@ -261,15 +260,21 @@ bool CCapture_FFMPEG::open(const char* _filename)
 		}
 	}
 
-	if (video_stream >= 0) valid = true;
+	if (video_stream >= 0) is_opened = true;
 
 exit_func:
 
-	if (!valid)
-		close();
+	if (!is_opened)
+		release();
 
-	return valid;
+	return is_opened;
 }
+
+bool CCapture_FFMPEG::isOpened()
+{
+	return is_opened;
+}
+
 
 bool CCapture_FFMPEG::grabFrame()
 {

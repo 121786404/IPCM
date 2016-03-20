@@ -39,7 +39,8 @@ public:
 	virtual ~CCapture_FFMPEG();
 	virtual void init();
 	virtual bool open(const char* filename);
-	virtual void close();
+	virtual bool isOpened();	
+	virtual void release();
 	virtual double getProperty(int) const;
 	virtual bool setProperty(int propIdx, double propVal);
 
@@ -80,4 +81,5 @@ private:
 	char * filename;
 	AVDictionary *dict;
 	AVInterruptCallbackMetadata interrupt_metadata;
+	bool is_opened;
 };
