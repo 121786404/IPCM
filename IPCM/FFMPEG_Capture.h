@@ -41,8 +41,8 @@ public:
 	virtual bool open(const char* filename);
 	virtual bool isOpened();	
 	virtual void release();
-	virtual double getProperty(int) const;
-	virtual bool setProperty(int propIdx, double propVal);
+	virtual double get(int) const;
+	virtual bool set(int propIdx, double propVal);
 
 	bool grabFrame();
 	bool retrieveFrame(Image_Info* img);

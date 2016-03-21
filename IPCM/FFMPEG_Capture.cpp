@@ -204,11 +204,15 @@ void CCapture_FFMPEG::release()
 bool CCapture_FFMPEG::open(const char* _filename)
 {
 	unsigned i;
+	int err;
 	is_opened = false;
 
 	av_register_all();
-	avformat_network_init();
-
+	if (_filename)
+		avformat_network_init();
+	else
+		avdevice_register_all();
+	
     /* interrupt callback */
     interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_TIMEOUT_MS;
     get_monotonic_time(&interrupt_metadata.value);
@@ -217,9 +221,26 @@ bool CCapture_FFMPEG::open(const char* _filename)
     ic->interrupt_callback.callback = _opencv_ffmpeg_interrupt_callback;
     ic->interrupt_callback.opaque = &interrupt_metadata;
 
+	if (_filename)
+	{
+		av_dict_set(&dict, "rtsp_transport", "tcp", 0);
+		err = avformat_open_input(&ic, _filename, NULL, &dict);
+	}
+	else
+	{
+		AVInputFormat *ifmt = av_find_input_format("vfwcap");
+		if(ifmt == NULL)
+			goto exit_func;
 
-	av_dict_set(&dict, "rtsp_transport", "tcp", 0);
-	int err = avformat_open_input(&ic, _filename, NULL, &dict);
+		err = avformat_open_input(&ic, 0, ifmt, NULL);
+		
+		//AVInputFormat *ifmt = av_find_input_format("dshow");
+		//avformat_open_input(&ic, "e2eSoft VCam", ifmt, NULL);
+		//AVDictionary* options = NULL;
+		//av_dict_set(&options, "list_options", "true", 0);
+		//AVInputFormat *ifmt = av_find_input_format("dshow");
+		//err = avformat_open_input(&ic, "e2eSoft VCam", ifmt, NULL);
+	}
 
 	if (err < 0)
 	{
@@ -459,7 +480,7 @@ bool CCapture_FFMPEG::retrieveFrame(Image_Info* img)
 	return true;
 }
 
-double CCapture_FFMPEG::getProperty(int property_id) const
+double CCapture_FFMPEG::get(int property_id) const
 {
 	if (!video_st) return 0;
 
@@ -490,7 +511,7 @@ double CCapture_FFMPEG::getProperty(int property_id) const
 	return 0;
 }
 
-bool CCapture_FFMPEG::setProperty(int property_id, double value)
+bool CCapture_FFMPEG::set(int property_id, double value)
 {
 	if (!video_st) return false;
 

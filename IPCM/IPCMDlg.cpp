@@ -325,7 +325,7 @@ static UINT ThreadVideoPlay(LPVOID lpParam) {
 		if (dlg->m_quit_video_play)
 				break;
 		
-		if (dlg->m_video_src == VIDEO_SOURCE_NETWORK && dlg->m_bUseFFmpeg)
+		if (dlg->m_bUseFFmpeg)
 		{
 			dlg->m_capture_ffmpeg.grabFrame();
 			dlg->m_capture_ffmpeg.retrieveFrame(&img);
@@ -399,15 +399,29 @@ void CIPCMDlg::OnOpenVideo()
 
 	m_quit_video_play = false;
 	USES_CONVERSION;
-	m_capture.open(W2A(FilePathName));
-	if (!m_capture.isOpened())
+	
+	if (m_bUseFFmpeg)
 	{
-		MessageBox(_T("打开视频流失败"), _T("错误"), MB_ICONEXCLAMATION);
-		return;
+		m_capture_ffmpeg.open(W2A(FilePathName));
+		if (!m_capture_ffmpeg.isOpened())
+		{
+			MessageBox(_T("打开视频文件失败"), _T("错误"), MB_ICONEXCLAMATION);
+			return;
+		}
+		m_video_play_wait_time = 1000 / (int)m_capture_ffmpeg.get(CAP_PROP_FPS);
+	}
+	else
+	{
+		m_capture.open(0);
+		if (!m_capture.isOpened())
+		{
+			MessageBox(_T("打开视频文件失败"), _T("错误"), MB_ICONEXCLAMATION);
+			return;
+		}
+		m_video_play_wait_time = 1000 / (int)m_capture.get(CAP_PROP_FPS);
 	}
 
 	m_video_src = VIDEO_SOURCE_FILE;
-	m_video_play_wait_time = 1000 / (int)m_capture.get(CAP_PROP_FPS);
 	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);
 }
 
@@ -416,11 +430,23 @@ void CIPCMDlg::OnOpenCam()
 	SystemClear();
 
 	m_quit_video_play = false;
-	m_capture.open(0);
-	if (!m_capture.isOpened())
+	if (m_bUseFFmpeg)
 	{
-		MessageBox(_T("打开摄像头失败"),_T("错误"), MB_ICONEXCLAMATION);
-		return;
+		m_capture_ffmpeg.open(0);
+		if (!m_capture_ffmpeg.isOpened())
+		{
+			MessageBox(_T("打开摄像头失败"), _T("错误"), MB_ICONEXCLAMATION);
+			return;
+		}
+	}
+	else
+	{
+		m_capture.open(0);
+		if (!m_capture.isOpened())
+		{
+			MessageBox(_T("打开摄像头失败"), _T("错误"), MB_ICONEXCLAMATION);
+			return;
+		}
 	}
 
 	m_video_src = VIDEO_SOURCE_CAMERA;
@@ -473,14 +499,14 @@ void CIPCMDlg::SetStreamInfo()
 {
 	if (m_bUseFFmpeg)
 	{
-		double frame_count = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_FRAME_COUNT);
-		double pos_frames  = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_POS_FRAMES);
-		double fps = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_FPS);
-		double fourcc = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_FOURCC);
-		double width = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_FRAME_WIDTH);
-		double height = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_FRAME_HEIGHT);
-		double sar_num = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_SAR_NUM);
-		double sar_den = m_capture_ffmpeg.getProperty(FFMPEG_CAP_PROP_SAR_DEN);
+		double frame_count = m_capture_ffmpeg.get(FFMPEG_CAP_PROP_FRAME_COUNT);
+		double pos_frames  = m_capture_ffmpeg.get(FFMPEG_CAP_PROP_POS_FRAMES);
+		double fps = m_capture_ffmpeg.get(FFMPEG_CAP_PROP_FPS);
+		double fourcc = m_capture_ffmpeg.get(FFMPEG_CAP_PROP_FOURCC);
+		double width = m_capture_ffmpeg.get(FFMPEG_CAP_PROP_FRAME_WIDTH);
+		double height = m_capture_ffmpeg.get(FFMPEG_CAP_PROP_FRAME_HEIGHT);
+		double sar_num = m_capture_ffmpeg.get(FFMPEG_CAP_PROP_SAR_NUM);
+		double sar_den = m_capture_ffmpeg.get(FFMPEG_CAP_PROP_SAR_DEN);
 
 
 		CString tmp;
