@@ -191,8 +191,10 @@ HCURSOR CIPCMDlg::OnQueryDragIcon()
 
 
 /* RTSPClient数据回调 */
-static int Easy_APICALL RTSPClientCallBack(int _chid, int *_chPtr, int _frameType, char *_pBuf, RTSP_FRAME_INFO* _frameInfo)
+static int RTSPClientCallBack(void* userData, RTSP_FRAME_INFO* frameInfo)
 {
+	dump_stream((unsigned char*)frameInfo->data, frameInfo->size);
+#if 0
 	if (_frameType == EASY_SDK_VIDEO_FRAME_FLAG)//回调视频数据，包含00 00 00 01头
 	{
 #if 0
@@ -270,6 +272,26 @@ static int Easy_APICALL RTSPClientCallBack(int _chid, int *_chPtr, int _frameTyp
 				mediainfo.u32VideoCodec, mediainfo.u32VideoFps, mediainfo.u32AudioCodec, mediainfo.u32AudioChannel, mediainfo.u32AudioSamplerate);
 		}
 	}
+#endif 
+
+
+	g_ffdecoder.init(28);//  _frameInfo->codec);
+	Image_Info_t img;
+	if (false == g_ffdecoder.decode((unsigned char *)frameInfo->data, frameInfo->size, &img))
+	{
+		TRACE("Decoder Error\n");
+		return 0;
+	}
+
+	if (m_bPreview)
+	{
+		Mat display_img(img.height, img.width, CV_8UC3, img.data, img.width*img.cn);
+		resizeWindow(g_url, 960, 540);
+		moveWindow(g_url, 0, 0);
+		imshow(g_url, display_img);
+		waitKey(30);  //延时30ms
+	}
+
 	return 0;
 }
 
@@ -289,15 +311,16 @@ void CIPCMDlg::OnOpenStream()
 	strcpy(g_url, W2A(FilePathName));
 
 	//创建RTSPSource
-	EasyRTSP_Init(&m_fRTSPHandle);
-
+	//EasyRTSP_Init(&m_fRTSPHandle);
+	RTSP_Init(&m_fRTSPHandle);
 	// 可以根据fRTSPHanlde判断，也可以根据EasyRTSP_Init是否返回0判断
-	if (NULL == m_fRTSPHandle)
-		return;
+	//if (NULL == m_fRTSPHandle)
+		//return;
 
-
-	EasyRTSP_SetCallback(m_fRTSPHandle, RTSPClientCallBack);
-	EasyRTSP_OpenStream(m_fRTSPHandle, 0, g_url, RTP_OVER_TCP, EASY_SDK_VIDEO_FRAME_FLAG, 0, 0, NULL, 1000, 0);
+	RTSP_SetCallback(m_fRTSPHandle, RTSPClientCallBack);
+	RTSP_OpenStream(m_fRTSPHandle, 0, g_url, RTP_OVER_TCP, EASY_SDK_VIDEO_FRAME_FLAG, 0, 0, NULL, 1000, 0);
+	//EasyRTSP_SetCallback(m_fRTSPHandle, RTSPClientCallBack);
+	//EasyRTSP_OpenStream(m_fRTSPHandle, 0, g_url, RTP_OVER_TCP, EASY_SDK_VIDEO_FRAME_FLAG, 0, 0, NULL, 1000, 0);
 	namedWindow(g_url, CV_WINDOW_NORMAL|CV_WINDOW_KEEPRATIO);
 }
 
@@ -315,10 +338,13 @@ void CIPCMDlg::SystemClear()
 	if (m_fRTSPHandle)
 	{
 		// 关闭RTSPClient
-		EasyRTSP_CloseStream(m_fRTSPHandle);
+		RTSP_CloseStream(m_fRTSPHandle);
+		//EasyRTSP_CloseStream(m_fRTSPHandle);
 
 		// 释放RTSPHandle
-		EasyRTSP_Deinit(&m_fRTSPHandle);
+		RTSP_Deinit(&m_fRTSPHandle);
+		//EasyRTSP_Deinit(&m_fRTSPHandle);
+
 		m_fRTSPHandle = NULL;
 	}
 

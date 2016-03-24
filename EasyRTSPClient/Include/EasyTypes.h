@@ -102,6 +102,8 @@ typedef struct __EASY_MEDIA_INFO_T
 /* 帧信息 */
 typedef struct 
 {
+	unsigned char*  data;
+	unsigned int    size;
 	unsigned int	codec;			/* 音视频格式 */
 
 	unsigned int	type;			/* 视频帧类型 */

@@ -80,7 +80,10 @@ extern "C"
 	//#include "libswresample/swresample.h"
 }
 #endif
+#include "liveMedia.hh"
+#include "BasicUsageEnvironment.hh"
 
 #include "EasyRTSPClientAPI.h"
+#include "RTSPClient.h"
 #include "FFDecoder.h"
 

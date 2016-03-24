@@ -42,6 +42,9 @@
     <ClInclude Include="NALINFO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RTSPClient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IPCM.cpp">
@@ -60,6 +63,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="NALINFO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RTSPClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

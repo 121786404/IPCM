@@ -7,14 +7,12 @@
 #include "afxdialogex.h"
 
 
-
-
 // CInputDlg dialog
 
 IMPLEMENT_DYNAMIC(CInputDlg, CDialogEx)
 
 CInputDlg::CInputDlg(CWnd* pParent /*=NULL*/)
-	: CDialogEx(IDD_DIALOG1, pParent)
+	: CDialogEx(IDD_INPUT_STREAM, pParent)
 {
 
 }
