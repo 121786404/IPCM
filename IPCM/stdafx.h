@@ -60,29 +60,27 @@
 #include <opencv2/imgproc/imgproc.hpp>
 using namespace cv;
 
-//FFmpeg
+#if 0
 extern "C"
 {
-#include "libavutil/avstring.h"
-	//#include "libavutil/colorspace.h"
-#include "libavutil/mathematics.h"
-#include "libavutil/pixdesc.h"
-#include "libavutil/imgutils.h"
-#include "libavutil/dict.h"
-#include "libavutil/parseutils.h"
-#include "libavutil/samplefmt.h"
-#include "libavutil/avassert.h"
-#include "libavutil/time.h"
-	//#include "libavutil/colorspace.h"
+	//#include "libavutil/avstring.h"
+	//#include "libavutil/mathematics.h"
+	//#include "libavutil/pixdesc.h"
+	//#include "libavutil/imgutils.h"
+	//#include "libavutil/dict.h"
+	//#include "libavutil/parseutils.h"
+	//#include "libavutil/samplefmt.h"
+	//#include "libavutil/avassert.h"
+	//#include "libavutil/time.h"
 #include "libavformat/avformat.h"
-#include "libavdevice/avdevice.h"
+	//#include "libavdevice/avdevice.h"
 #include "libswscale/swscale.h"
-#include "libavutil/opt.h"
-#include "libavcodec/avfft.h"
-#include "libswresample/swresample.h"
+	//#include "libavutil/opt.h"
+	//#include "libavcodec/avfft.h"
+	//#include "libswresample/swresample.h"
 }
+#endif
 
+#include "EasyRTSPClientAPI.h"
+#include "FFDecoder.h"
 
-
-
-#include "FFMPEG_Capture.h"

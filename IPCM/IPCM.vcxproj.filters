@@ -36,7 +36,7 @@
     <ClInclude Include="InputDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FFMPEG_Capture.h">
+    <ClInclude Include="FFDecoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="NALINFO.h">
@@ -56,7 +56,7 @@
     <ClCompile Include="InputDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FFMPEG_Capture.cpp">
+    <ClCompile Include="FFDecoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="NALINFO.cpp">
