@@ -34,33 +34,11 @@
 #include <afxcontrolbars.h>     // 功能区和控件条的 MFC 支持
 
 
-
-
-
-
-
-
-
-#ifdef _UNICODE
-#if defined _M_IX86
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#elif defined _M_X64
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#else
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#endif
-#endif
-
-#if 0//def _DEBUG
-#define _CRTDBG_MAP_ALLOC 
-#include <crtdbg.h>
-#endif
-
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 using namespace cv;
 
-#if 0
+
 extern "C"
 {
 	//#include "libavutil/avstring.h"
@@ -79,11 +57,22 @@ extern "C"
 	//#include "libavcodec/avfft.h"
 	//#include "libswresample/swresample.h"
 }
-#endif
-#include "liveMedia.hh"
-#include "BasicUsageEnvironment.hh"
 
-#include "EasyRTSPClientAPI.h"
-#include "RTSPClient.h"
-#include "FFDecoder.h"
+
+#include "FFMPEG_Capture.h"
+#include <vector>
+
+
+
+
+#ifdef _UNICODE
+#if defined _M_IX86
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_X64
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#else
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
+#endif
+
 

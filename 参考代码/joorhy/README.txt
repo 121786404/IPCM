@@ -1,1 +1,0 @@
-https://github.com/joorhy/jorhy-prj\src\host\onvif2\Rtsp

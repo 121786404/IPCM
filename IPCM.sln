@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IPCM", "IPCM\IPCM.vcxproj", "{A8A4D854-7CAA-4681-B5B6-FF3F5C91080C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IPCM", "IPCM\IPCM.vcxproj", "{B43A8585-D3B6-404B-9D8B-A82930A53E61}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,14 +13,14 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A8A4D854-7CAA-4681-B5B6-FF3F5C91080C}.Debug|x64.ActiveCfg = Debug|x64
-		{A8A4D854-7CAA-4681-B5B6-FF3F5C91080C}.Debug|x64.Build.0 = Debug|x64
-		{A8A4D854-7CAA-4681-B5B6-FF3F5C91080C}.Debug|x86.ActiveCfg = Debug|Win32
-		{A8A4D854-7CAA-4681-B5B6-FF3F5C91080C}.Debug|x86.Build.0 = Debug|Win32
-		{A8A4D854-7CAA-4681-B5B6-FF3F5C91080C}.Release|x64.ActiveCfg = Release|x64
-		{A8A4D854-7CAA-4681-B5B6-FF3F5C91080C}.Release|x64.Build.0 = Release|x64
-		{A8A4D854-7CAA-4681-B5B6-FF3F5C91080C}.Release|x86.ActiveCfg = Release|Win32
-		{A8A4D854-7CAA-4681-B5B6-FF3F5C91080C}.Release|x86.Build.0 = Release|Win32
+		{B43A8585-D3B6-404B-9D8B-A82930A53E61}.Debug|x64.ActiveCfg = Debug|x64
+		{B43A8585-D3B6-404B-9D8B-A82930A53E61}.Debug|x64.Build.0 = Debug|x64
+		{B43A8585-D3B6-404B-9D8B-A82930A53E61}.Debug|x86.ActiveCfg = Debug|Win32
+		{B43A8585-D3B6-404B-9D8B-A82930A53E61}.Debug|x86.Build.0 = Debug|Win32
+		{B43A8585-D3B6-404B-9D8B-A82930A53E61}.Release|x64.ActiveCfg = Release|x64
+		{B43A8585-D3B6-404B-9D8B-A82930A53E61}.Release|x64.Build.0 = Release|x64
+		{B43A8585-D3B6-404B-9D8B-A82930A53E61}.Release|x86.ActiveCfg = Release|Win32
+		{B43A8585-D3B6-404B-9D8B-A82930A53E61}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

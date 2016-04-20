@@ -5,69 +5,11 @@
 #include "stdafx.h"
 #include "IPCM.h"
 #include "IPCMDlg.h"
-#include "InputDlg.h"
 #include "afxdialogex.h"
-
-
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-
-static FILE* g_dump_file = NULL;
-static FFDecoder g_ffdecoder;
-static char  g_url[1024];
-static bool m_bPreview;
-
-static void dump_stream(unsigned char *buf, int size)
-{
-	if (g_dump_file == NULL)
-		g_dump_file = fopen("IPCM_DUMP.h264", "wb");
-
-	fwrite(buf, 1, size, g_dump_file);
-}
-
-
-static void ConvetMattoImage(Mat mat, Image_Info_t* img)
-{
-	img->data = mat.data;
-	//img->step  =
-	img->width = mat.cols;
-	img->height = mat.rows;
-	img->cn = mat.channels();
-}
-
-// 用于应用程序“关于”菜单项的 CAboutDlg 对话框
-
-class CAboutDlg : public CDialogEx
-{
-public:
-	CAboutDlg();
-
-	// 对话框数据
-#ifdef AFX_DESIGN_TIME
-	enum { IDD = IDD_ABOUTBOX };
-#endif
-
-protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
-
-// 实现
-protected:
-	DECLARE_MESSAGE_MAP()
-};
-
-CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
-{
-}
-
-void CAboutDlg::DoDataExchange(CDataExchange* pDX)
-{
-	CDialogEx::DoDataExchange(pDX);
-}
-
-BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
-END_MESSAGE_MAP()
 
 
 // CIPCMDlg 对话框
@@ -76,26 +18,33 @@ END_MESSAGE_MAP()
 
 CIPCMDlg::CIPCMDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_IPCM_DIALOG, pParent)
-
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
-	m_fRTSPHandle = NULL;
-	m_bPreview = true;
 }
 
 void CIPCMDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+
+	m_pThreadVideoPlay = NULL;
+	m_quit_video_play = false;
+	m_dump_file = NULL;
+	m_bPreview = false;
+	m_bShowFpsSpline = false;
+
+	m_bPreview = true;
+	m_bShowFpsSpline = true;
+
+	m_fpsImage = NULL;
+	m_previewImage = NULL;
+	m_begine_time = 0;
+	m_current_frame_num = 0;
 }
 
 BEGIN_MESSAGE_MAP(CIPCMDlg, CDialogEx)
-	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_WM_DESTROY()
-	ON_COMMAND(ID_OPEN_STREAM, &CIPCMDlg::OnOpenStream)
-	ON_BN_CLICKED(IDC_SHOW_NAL, &CIPCMDlg::OnBnClickedShowNal)
-	ON_BN_CLICKED(IDC_PREVIEW, &CIPCMDlg::OnBnClickedPreview)
+	ON_BN_CLICKED(IDC_OPEN_URL, &CIPCMDlg::OnBnClickedOpenUrl)
 END_MESSAGE_MAP()
 
 
@@ -105,51 +54,16 @@ BOOL CIPCMDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	// 将“关于...”菜单项添加到系统菜单中。
-
-	// IDM_ABOUTBOX 必须在系统命令范围内。
-	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
-	ASSERT(IDM_ABOUTBOX < 0xF000);
-
-	CMenu* pSysMenu = GetSystemMenu(FALSE);
-	if (pSysMenu != NULL)
-	{
-		BOOL bNameValid;
-		CString strAboutMenu;
-		bNameValid = strAboutMenu.LoadString(IDS_ABOUTBOX);
-		ASSERT(bNameValid);
-		if (!strAboutMenu.IsEmpty())
-		{
-			pSysMenu->AppendMenu(MF_SEPARATOR);
-			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
-		}
-	}
-
 	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
 	//  执行此操作
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
-
-	::SetWindowPos(this->m_hWnd, HWND_BOTTOM, 0, 0, 1024, 700, SWP_NOZORDER);
-	CenterWindow();
-	//AllocConsole();
+	
+	GetDlgItem(IDC_URL)->SetWindowText(_T("rtsp://172.21.17.49/video0"));
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
-}
-
-void CIPCMDlg::OnSysCommand(UINT nID, LPARAM lParam)
-{
-	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
-	{
-		CAboutDlg dlgAbout;
-		dlgAbout.DoModal();
-	}
-	else
-	{
-		CDialogEx::OnSysCommand(nID, lParam);
-	}
 }
 
 // 如果向对话框添加最小化按钮，则需要下面的代码
@@ -178,7 +92,6 @@ void CIPCMDlg::OnPaint()
 	else
 	{
 		CDialogEx::OnPaint();
-		CDialogEx::UpdateWindow();				// 更新windows窗口，如果无这步调用，图片显示还会出现问题
 	}
 }
 
@@ -189,194 +102,194 @@ HCURSOR CIPCMDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-
-/* RTSPClient数据回调 */
-static int RTSPClientCallBack(void* userData, RTSP_FRAME_INFO* frameInfo)
+void CIPCMDlg::DumpStream(unsigned char *buf, int size)
 {
-	dump_stream((unsigned char*)frameInfo->data, frameInfo->size);
-#if 0
-	if (_frameType == EASY_SDK_VIDEO_FRAME_FLAG)//回调视频数据，包含00 00 00 01头
+	if (m_dump_file == NULL)
+		fopen_s(&m_dump_file, "IPCM_DUMP.h264", "wb");
+
+	fwrite(buf, 1, size, m_dump_file);
+}
+
+
+#define FPS_TIME_WINDOW 300
+#define FPS_MAX 40 
+static int fps_window_scale_x = 4;
+static int fps_window_scale_y = 10;
+static int fps_window_border = fps_window_scale_x * 10;		// border around graph within the image
+static int fps_window_width = fps_window_scale_x*FPS_TIME_WINDOW + 2 * fps_window_border;
+static int fps_window_height = fps_window_scale_y*FPS_MAX + 2 * fps_window_border;
+
+static void drawUCharGraph(std::vector<fps_info_t>* fps_info_vec, IplImage* imageGraph)
+{
+	cvSet(imageGraph, CV_RGB(255, 255, 255));
+	cvLine(imageGraph, cvPoint(0, fps_window_height - (fps_window_border + 30 * fps_window_scale_y)), cvPoint(fps_window_width - 1, fps_window_height - (fps_window_border + 30 * fps_window_scale_y)), CV_RGB(185, 0, 0), 1, CV_AA);	// Draw a line from the previous point to the new point
+	cvLine(imageGraph, cvPoint(0, fps_window_height - (fps_window_border + 25 * fps_window_scale_y)), cvPoint(fps_window_width - 1, fps_window_height - (fps_window_border + 25 * fps_window_scale_y)), CV_RGB(185, 0, 0), 1, CV_AA);	// Draw a line from the previous point to the new point
+	cvLine(imageGraph, cvPoint(0, fps_window_height - (fps_window_border + 20 * fps_window_scale_y)), cvPoint(fps_window_width - 1, fps_window_height - (fps_window_border + 20 * fps_window_scale_y)), CV_RGB(185, 0, 0), 1, CV_AA);	// Draw a line from the previous point to the new point
+
+	int x0 = fps_window_scale_x * 0;
+	int y0 = fps_window_scale_y*(fps_info_vec->begin()->frame_num);
+	CvPoint ptPrev = cvPoint(fps_window_border + x0, fps_window_height - (fps_window_border + y0));
+
+	std::vector<fps_info_t>::iterator iter;
+	for (iter = fps_info_vec->begin(); iter != fps_info_vec->end(); iter++)
 	{
-#if 0
-		if (_frameInfo->codec == EASY_SDK_VIDEO_CODEC_H264)
+		int x = fps_window_scale_x*((int)(iter->recive_time - fps_info_vec->begin()->recive_time));
+		int y = fps_window_scale_y*iter->frame_num;
+		CvPoint ptNew = cvPoint(fps_window_border + x, fps_window_height - (fps_window_border + y));
+		cvLine(imageGraph, ptPrev, ptNew, CV_RGB(0, 0, 0), 1, CV_AA);	// Draw a line from the previous point to the new point
+		ptPrev = ptNew;
+	}
+}
+
+
+static UINT ThreadVideoPlay(LPVOID lpParam) {
+	CIPCMDlg *dlg = (CIPCMDlg *)lpParam;
+	Image_Info img;
+
+	while (1)
+	{
+		if (dlg->m_quit_video_play)
+			break;
+
+		if (false == dlg->m_capture_ffmpeg.grabFrame())
 		{
-			/*
-			每一个I关键帧都是SPS+PPS+IDR的组合
-			|---------------------|----------------|-------------------------------------|
-			|                     |                |                                     |
-			0-----------------reserved1--------reserved2-------------------------------length
-			*/
-			if (_frameInfo->type == EASY_SDK_VIDEO_FRAME_I)
+			TRACE("grabFrame fail\n");
+			continue;;
+		}
+
+		if (false == dlg->m_capture_ffmpeg.retrieveFrame(&img))
+		{
+			TRACE("retrieveFrame fail\n");
+			break;
+		}
+
+		time_t current_time = time(NULL);
+		if (current_time != dlg->m_begine_time)
+		{
+			if (dlg->m_fps_info_vec.size() == FPS_TIME_WINDOW)
+				dlg->m_fps_info_vec.erase(dlg->m_fps_info_vec.begin());
+
+			fps_info_t fps_info;
+			fps_info.recive_time = current_time;
+			fps_info.frame_num = dlg->m_current_frame_num;
+			dlg->m_fps_info_vec.push_back(fps_info);
+			if (dlg->m_bShowFpsSpline)
 			{
-				TRACE("Get I H264 Len:%d \ttimestamp:%u.%u\n", _frameInfo->length, _frameInfo->timestamp_sec, _frameInfo->timestamp_usec);
-				char sps[2048] = { 0 };
-				char pps[2048] = { 0 };
-				char* IFrame = NULL;
-				unsigned int spsLen, ppsLen, iFrameLen = 0;
-
-				spsLen = _frameInfo->reserved1;							// SPS数据长度
-				ppsLen = _frameInfo->reserved2 - _frameInfo->reserved1;	// PPS数据长度
-				iFrameLen = _frameInfo->length - spsLen - ppsLen;		// IDR数据长度
-
-				memcpy(sps, _pBuf, spsLen);			//SPS数据，包含00 00 00 01
-				memcpy(pps, _pBuf + spsLen, ppsLen);	//PPS数据，包含00 00 00 01
-				IFrame = _pBuf + spsLen + ppsLen;	//IDR数据，包含00 00 00 01
+				drawUCharGraph(&dlg->m_fps_info_vec, dlg->m_fpsImage);
+				cvShowImage("fps", dlg->m_fpsImage);
 			}
-			else if (_frameInfo->type == EASY_SDK_VIDEO_FRAME_P)
+			dlg->m_begine_time = current_time;
+			dlg->m_current_frame_num = 0;
+		}
+		else
+		{
+			dlg->m_current_frame_num++;
+		}
+
+		//DumpStream(packet_buf, packet_size);
+
+		if (dlg->m_bPreview)
+		{
+			if (dlg->m_previewImage == NULL)
 			{
-				TRACE("Get P H264 Len:%d \ttimestamp:%u.%u\n", _frameInfo->length, _frameInfo->timestamp_sec, _frameInfo->timestamp_usec);
+				dlg->m_previewImage = cvCreateImage(cvSize(img.width, img.height), IPL_DEPTH_8U, img.cn);
+				cvResizeWindow(dlg->m_url, img.width, img.height);
 			}
-		}
-#endif
-		//dump_stream((unsigned char*)_pBuf, _frameInfo->length);
-
-		g_ffdecoder.init(_frameInfo->codec);
-		Image_Info_t img;
-		if (false == g_ffdecoder.decode((unsigned char *)_pBuf, _frameInfo->length, &img))
-		{
-			TRACE("Decoder Error\n");
-			return 0;
-		}
-	
-		if (m_bPreview)
-		{
-			Mat display_img(img.height, img.width, CV_8UC3, img.data, img.width*img.cn);
-			resizeWindow(g_url, 960, 540);
-			moveWindow(g_url, 0, 0);
-			imshow(g_url, display_img);
-			waitKey(30);  //延时30ms
+			memcpy(dlg->m_previewImage->imageData, img.data, dlg->m_previewImage->imageSize);
+			IplImage* tmp = dlg->m_previewImage;
+			cvShowImage(dlg->m_url, dlg->m_previewImage);
 		}
 	}
-	else if (_frameType == EASY_SDK_EVENT_FRAME_FLAG)//回调连接状态事件
-	{
-		// 初始连接或者连接失败再次进行重连
-		if (NULL == _pBuf && NULL == _frameInfo)
-		{
-			TRACE("Connecting: ...\n");
-		}
 
-		// 有丢帧情况!
-		else if (NULL != _frameInfo && _frameInfo->type == 0xF1)
-		{
-			TRACE("Lose Packet ...\n");
-		}
-	}
-	else if (_frameType == EASY_SDK_MEDIA_INFO_FLAG)//回调出媒体信息
-	{
-		if (_pBuf != NULL)
-		{
-			EASY_MEDIA_INFO_T mediainfo;
-			memset(&mediainfo, 0x00, sizeof(EASY_MEDIA_INFO_T));
-			memcpy(&mediainfo, _pBuf, sizeof(EASY_MEDIA_INFO_T));
-			TRACE("RTSP DESCRIBE Get Media Info: video:%u fps:%u audio:%u channel:%u sampleRate:%u \n",
-				mediainfo.u32VideoCodec, mediainfo.u32VideoFps, mediainfo.u32AudioCodec, mediainfo.u32AudioChannel, mediainfo.u32AudioSamplerate);
-		}
-	}
-#endif 
-
-
-	g_ffdecoder.init(28);//  _frameInfo->codec);
-	Image_Info_t img;
-	if (false == g_ffdecoder.decode((unsigned char *)frameInfo->data, frameInfo->size, &img))
-	{
-		TRACE("Decoder Error\n");
-		return 0;
-	}
-
-	if (m_bPreview)
-	{
-		Mat display_img(img.height, img.width, CV_8UC3, img.data, img.width*img.cn);
-		resizeWindow(g_url, 960, 540);
-		moveWindow(g_url, 0, 0);
-		imshow(g_url, display_img);
-		waitKey(30);  //延时30ms
-	}
-
+	dlg->m_pThreadVideoPlay = NULL;
 	return 0;
 }
 
-void CIPCMDlg::OnOpenStream()
+void CIPCMDlg::SetStreamInfo()
 {
-	SystemClear();
+	double fps = m_capture_ffmpeg.get(FFMPEG_CAP_PROP_FPS);
+	unsigned int fourcc = (unsigned int)m_capture_ffmpeg.get(FFMPEG_CAP_PROP_FOURCC);
+	unsigned int width = (unsigned int)m_capture_ffmpeg.get(FFMPEG_CAP_PROP_FRAME_WIDTH);
+	unsigned int height = (unsigned int)m_capture_ffmpeg.get(FFMPEG_CAP_PROP_FRAME_HEIGHT);
+	int sar_num = (int)m_capture_ffmpeg.get(FFMPEG_CAP_PROP_SAR_NUM);
+	int sar_den = (int)m_capture_ffmpeg.get(FFMPEG_CAP_PROP_SAR_DEN);
 
-	CInputDlg m_dlg;
-	if (m_dlg.DoModal() != IDOK)
-		return;
 
-	//CString FilePathName("rtsp://192.168.111.1/IPCM.265");
-	CString FilePathName("rtsp://192.168.111.1/IPCM.264");
-
-	USES_CONVERSION;
-
-	strcpy(g_url, W2A(FilePathName));
-
-	//创建RTSPSource
-	//EasyRTSP_Init(&m_fRTSPHandle);
-	RTSP_Init(&m_fRTSPHandle);
-	// 可以根据fRTSPHanlde判断，也可以根据EasyRTSP_Init是否返回0判断
-	//if (NULL == m_fRTSPHandle)
-		//return;
-
-	RTSP_SetCallback(m_fRTSPHandle, RTSPClientCallBack);
-	RTSP_OpenStream(m_fRTSPHandle, 0, g_url, RTP_OVER_TCP, EASY_SDK_VIDEO_FRAME_FLAG, 0, 0, NULL, 1000, 0);
-	//EasyRTSP_SetCallback(m_fRTSPHandle, RTSPClientCallBack);
-	//EasyRTSP_OpenStream(m_fRTSPHandle, 0, g_url, RTP_OVER_TCP, EASY_SDK_VIDEO_FRAME_FLAG, 0, 0, NULL, 1000, 0);
-	namedWindow(g_url, CV_WINDOW_NORMAL|CV_WINDOW_KEEPRATIO);
+	CString tmp;
+	//tmp.Format(_T("%d"), (int)frame_count);		           m_frame_num.SetWindowText(tmp);
+	//tmp.Format(_T("%d x %d "), (int)width, (int)height);   m_video_size.SetWindowText(tmp);
+	//tmp.Format(_T("%5.2ffps"), fps);					   m_fps.SetWindowText(tmp);
 }
+
 
 void CIPCMDlg::SystemClear()
 {
-	destroyWindow(g_url);
-	memset(g_url, 0, sizeof(g_url));
+	cvDestroyWindow(m_url);
+	cvDestroyWindow("fps");
+
+
+	memset(m_url, 0, sizeof(m_url));
+
+	if (m_previewImage)
+		cvReleaseImage(&m_previewImage);
+
+	if (m_fpsImage)
+		cvReleaseImage(&m_fpsImage);
+
+	if (m_dump_file)
+	{
+		fclose(m_dump_file);
+		m_dump_file = NULL;
+	}
+
+	m_fps_info_vec.clear();
+}
+
+void CIPCMDlg::OnBnClickedOpenUrl()
+{
+	CString FilePathName;
+	GetDlgItem(IDC_URL)->GetWindowText(FilePathName);
 	
-	if (g_dump_file)
-	{
-		fclose(g_dump_file);
-		g_dump_file = NULL;
-	}
-
-	if (m_fRTSPHandle)
-	{
-		// 关闭RTSPClient
-		RTSP_CloseStream(m_fRTSPHandle);
-		//EasyRTSP_CloseStream(m_fRTSPHandle);
-
-		// 释放RTSPHandle
-		RTSP_Deinit(&m_fRTSPHandle);
-		//EasyRTSP_Deinit(&m_fRTSPHandle);
-
-		m_fRTSPHandle = NULL;
-	}
-
-	g_ffdecoder.release();
-
-}
-
-void CIPCMDlg::OnClose()
-{
 	SystemClear();
-	CDialogEx::OnClose();
-}
 
-void CIPCMDlg::OnBnClickedShowNal()
-{
-	// TODO: Add your control notification handler code here
-}
+	
+	// FilePathName = "rtsp://172.21.16.85/IPCM.265";
+	// FilePathName = "rtsp://172.21.16.85/IPCM.264";
+	// FilePathName = "rtsp://172.21.17.49/video0";
+	// FilePathName = "rtsp://172.21.17.55/video0";
 
+	if (FilePathName.IsEmpty())
+	{
+		return;
+	}
 
-void CIPCMDlg::OnBnClickedPreview()
-{
-	// TODO: Add your control notification handler code here
+	USES_CONVERSION;
+	strcpy_s(m_url, W2A(FilePathName));
+
+	m_capture_ffmpeg.open(W2A(FilePathName));
+	if (!m_capture_ffmpeg.isOpened())
+	{
+		MessageBox(_T("打开视频流"), _T("错误"), MB_ICONEXCLAMATION);
+		return;
+	}
+	//memset(&m_ff_packet, 0, sizeof(m_ff_packet));
+	//av_init_packet(&m_ff_packet);
+
+	SetStreamInfo();
+	m_quit_video_play = false;
+	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//开启线程
+
+	m_begine_time = time(NULL);
+	if (m_bShowFpsSpline)
+	{
+		m_fpsImage = cvCreateImage(cvSize(fps_window_width, fps_window_height), 8, 3);
+		cvNamedWindow("fps");
+	}
+
 	if (m_bPreview)
 	{
-		m_bPreview = false;
-		GetDlgItem (IDC_PREVIEW)->SetWindowText(_T("预览"));
-		destroyWindow(g_url);
-	}
-	else
-	{
-		m_bPreview = true;
-		GetDlgItem(IDC_PREVIEW)->SetWindowText(_T("关闭预览"));
-		namedWindow(g_url, CV_WINDOW_NORMAL | CV_WINDOW_KEEPRATIO);
+		//m_previewImage = NULL;
+		cvNamedWindow(m_url);// , CV_WINDOW_NORMAL | CV_WINDOW_KEEPRATIO);
+							 //cvMoveWindow(g_url, 0, 0);
 	}
 }
