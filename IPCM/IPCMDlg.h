@@ -42,8 +42,9 @@ public:
 public:
 	CWinThread *m_pThreadVideoPlay;
 	bool m_quit_video_play;
-
+	bool m_bUseFFmpegCapture;
 	CCapture_FFMPEG m_capture_ffmpeg;
+	CvCapture* m_capture_opencv;
 	FILE* m_dump_file;
 	char  m_url[1024];
 	bool m_bPreview;
@@ -58,4 +59,7 @@ public:
 	void SystemClear();
 	void SetStreamInfo();
 	void DumpStream(unsigned char *buf, int size);
+	afx_msg void OnBnClickedShowFps();
+	afx_msg void OnBnClickedPreview();
+	virtual BOOL DestroyWindow();
 };

@@ -1,5 +1,5 @@
-
-// IPCMDlg.cpp : ÊµÏÖÎÄ¼ş
+ï»¿
+// IPCMDlg.cpp : å®ç°æ–‡ä»¶
 //
 
 #include "stdafx.h"
@@ -12,7 +12,7 @@
 #endif
 
 
-// CIPCMDlg ¶Ô»°¿ò
+// CIPCMDlg å¯¹è¯æ¡†
 
 
 
@@ -29,56 +29,56 @@ void CIPCMDlg::DoDataExchange(CDataExchange* pDX)
 	m_pThreadVideoPlay = NULL;
 	m_quit_video_play = false;
 	m_dump_file = NULL;
-	m_bPreview = false;
-	m_bShowFpsSpline = false;
-
 	m_bPreview = true;
-	m_bShowFpsSpline = true;
-
+	m_bShowFpsSpline = false;
 	m_fpsImage = NULL;
 	m_previewImage = NULL;
 	m_begine_time = 0;
 	m_current_frame_num = 0;
+	m_capture_opencv = NULL;
+	m_bUseFFmpegCapture = true;
 }
 
 BEGIN_MESSAGE_MAP(CIPCMDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_OPEN_URL, &CIPCMDlg::OnBnClickedOpenUrl)
+	ON_BN_CLICKED(IDC_SHOW_FPS, &CIPCMDlg::OnBnClickedShowFps)
+	ON_BN_CLICKED(IDC_PREVIEW, &CIPCMDlg::OnBnClickedPreview)
 END_MESSAGE_MAP()
 
 
-// CIPCMDlg ÏûÏ¢´¦Àí³ÌĞò
+// CIPCMDlg æ¶ˆæ¯å¤„ç†ç¨‹åº
 
 BOOL CIPCMDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	// ÉèÖÃ´Ë¶Ô»°¿òµÄÍ¼±ê¡£  µ±Ó¦ÓÃ³ÌĞòÖ÷´°¿Ú²»ÊÇ¶Ô»°¿òÊ±£¬¿ò¼Ü½«×Ô¶¯
-	//  Ö´ĞĞ´Ë²Ù×÷
-	SetIcon(m_hIcon, TRUE);			// ÉèÖÃ´óÍ¼±ê
-	SetIcon(m_hIcon, FALSE);		// ÉèÖÃĞ¡Í¼±ê
+	// è®¾ç½®æ­¤å¯¹è¯æ¡†çš„å›¾æ ‡ã€‚  å½“åº”ç”¨ç¨‹åºä¸»çª—å£ä¸æ˜¯å¯¹è¯æ¡†æ—¶ï¼Œæ¡†æ¶å°†è‡ªåŠ¨
+	//  æ‰§è¡Œæ­¤æ“ä½œ
+	SetIcon(m_hIcon, TRUE);			// è®¾ç½®å¤§å›¾æ ‡
+	SetIcon(m_hIcon, FALSE);		// è®¾ç½®å°å›¾æ ‡
 
-	// TODO: ÔÚ´ËÌí¼Ó¶îÍâµÄ³õÊ¼»¯´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ é¢å¤–çš„åˆå§‹åŒ–ä»£ç 
 	
 	GetDlgItem(IDC_URL)->SetWindowText(_T("rtsp://172.21.17.49/video0"));
 
-	return TRUE;  // ³ı·Ç½«½¹µãÉèÖÃµ½¿Ø¼ş£¬·ñÔò·µ»Ø TRUE
+	return TRUE;  // é™¤éå°†ç„¦ç‚¹è®¾ç½®åˆ°æ§ä»¶ï¼Œå¦åˆ™è¿”å› TRUE
 }
 
-// Èç¹ûÏò¶Ô»°¿òÌí¼Ó×îĞ¡»¯°´Å¥£¬ÔòĞèÒªÏÂÃæµÄ´úÂë
-//  À´»æÖÆ¸ÃÍ¼±ê¡£  ¶ÔÓÚÊ¹ÓÃÎÄµµ/ÊÓÍ¼Ä£ĞÍµÄ MFC Ó¦ÓÃ³ÌĞò£¬
-//  Õâ½«ÓÉ¿ò¼Ü×Ô¶¯Íê³É¡£
+// å¦‚æœå‘å¯¹è¯æ¡†æ·»åŠ æœ€å°åŒ–æŒ‰é’®ï¼Œåˆ™éœ€è¦ä¸‹é¢çš„ä»£ç 
+//  æ¥ç»˜åˆ¶è¯¥å›¾æ ‡ã€‚  å¯¹äºä½¿ç”¨æ–‡æ¡£/è§†å›¾æ¨¡å‹çš„ MFC åº”ç”¨ç¨‹åºï¼Œ
+//  è¿™å°†ç”±æ¡†æ¶è‡ªåŠ¨å®Œæˆã€‚
 
 void CIPCMDlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // ÓÃÓÚ»æÖÆµÄÉè±¸ÉÏÏÂÎÄ
+		CPaintDC dc(this); // ç”¨äºç»˜åˆ¶çš„è®¾å¤‡ä¸Šä¸‹æ–‡
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// Ê¹Í¼±êÔÚ¹¤×÷Çø¾ØĞÎÖĞ¾ÓÖĞ
+		// ä½¿å›¾æ ‡åœ¨å·¥ä½œåŒºçŸ©å½¢ä¸­å±…ä¸­
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -86,7 +86,7 @@ void CIPCMDlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// »æÖÆÍ¼±ê
+		// ç»˜åˆ¶å›¾æ ‡
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
@@ -95,8 +95,8 @@ void CIPCMDlg::OnPaint()
 	}
 }
 
-//µ±ÓÃ»§ÍÏ¶¯×îĞ¡»¯´°¿ÚÊ±ÏµÍ³µ÷ÓÃ´Ëº¯ÊıÈ¡µÃ¹â±ê
-//ÏÔÊ¾¡£
+//å½“ç”¨æˆ·æ‹–åŠ¨æœ€å°åŒ–çª—å£æ—¶ç³»ç»Ÿè°ƒç”¨æ­¤å‡½æ•°å–å¾—å…‰æ ‡
+//æ˜¾ç¤ºã€‚
 HCURSOR CIPCMDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
@@ -150,19 +150,38 @@ static UINT ThreadVideoPlay(LPVOID lpParam) {
 	{
 		if (dlg->m_quit_video_play)
 			break;
-
-		if (false == dlg->m_capture_ffmpeg.grabFrame())
+	
+		if (dlg->m_bUseFFmpegCapture)
 		{
-			TRACE("grabFrame fail\n");
-			continue;;
+			//IPC_TRACE("\n");
+			if (false == dlg->m_capture_ffmpeg.grabFrame())
+			{
+				IPC_TRACE("grabFrame fail\n");
+				continue;
+			}
+			//IPC_TRACE("\n");
+
+			if (false == dlg->m_capture_ffmpeg.retrieveFrame(&img))
+			{
+				IPC_TRACE("retrieveFrame fail\n");
+				break;
+			}
+		}
+		else
+		{
+			//cvGrabFrame(&m_capture_opencv);
+			//IplImage* frame = cvRetrieveFrame(dlg->m_capture_opencv);
+			IPC_TRACE("\n");
+			dlg->m_previewImage = cvQueryFrame(dlg->m_capture_opencv);
+			if (!dlg->m_previewImage)
+				break;
+			IPC_TRACE("\n");
+
+			//cvWriteFrame(writer, img);
+			
 		}
 
-		if (false == dlg->m_capture_ffmpeg.retrieveFrame(&img))
-		{
-			TRACE("retrieveFrame fail\n");
-			break;
-		}
-
+		//IPC_TRACE("\n");
 		time_t current_time = time(NULL);
 		if (current_time != dlg->m_begine_time)
 		{
@@ -185,20 +204,27 @@ static UINT ThreadVideoPlay(LPVOID lpParam) {
 		{
 			dlg->m_current_frame_num++;
 		}
-
 		//DumpStream(packet_buf, packet_size);
-
+		//IPC_TRACE("\n");
 		if (dlg->m_bPreview)
 		{
-			if (dlg->m_previewImage == NULL)
+			if (dlg->m_bUseFFmpegCapture)
 			{
-				dlg->m_previewImage = cvCreateImage(cvSize(img.width, img.height), IPL_DEPTH_8U, img.cn);
-				cvResizeWindow(dlg->m_url, img.width, img.height);
+				if (dlg->m_previewImage == NULL)
+				{
+					dlg->m_previewImage = cvCreateImage(cvSize(img.width, img.height), IPL_DEPTH_8U, img.cn);
+					cvResizeWindow(dlg->m_url, img.width, img.height);
+				}
+				memcpy(dlg->m_previewImage->imageData, img.data, dlg->m_previewImage->imageSize);
+				//IplImage* tmp = dlg->m_previewImage;
 			}
-			memcpy(dlg->m_previewImage->imageData, img.data, dlg->m_previewImage->imageSize);
-			IplImage* tmp = dlg->m_previewImage;
+			
 			cvShowImage(dlg->m_url, dlg->m_previewImage);
+			cvWaitKey(20);
 		}
+		//IPC_TRACE("\n");
+		//Sleep(20);
+		//IPC_TRACE("\n");
 	}
 
 	dlg->m_pThreadVideoPlay = NULL;
@@ -224,11 +250,27 @@ void CIPCMDlg::SetStreamInfo()
 
 void CIPCMDlg::SystemClear()
 {
-	cvDestroyWindow(m_url);
-	cvDestroyWindow("fps");
+	m_quit_video_play = true;
+	while (m_pThreadVideoPlay)
+	{
+		Sleep(100);
+	}
 
+	if (m_capture_ffmpeg.isOpened())
+	{
+		m_capture_ffmpeg.release();
+	}
 
-	memset(m_url, 0, sizeof(m_url));
+	if (m_capture_opencv)
+	{
+		cvReleaseCapture(&m_capture_opencv);
+	}
+
+	if (m_dump_file)
+	{
+		fclose(m_dump_file);
+		m_dump_file = NULL;
+	}
 
 	if (m_previewImage)
 		cvReleaseImage(&m_previewImage);
@@ -236,11 +278,10 @@ void CIPCMDlg::SystemClear()
 	if (m_fpsImage)
 		cvReleaseImage(&m_fpsImage);
 
-	if (m_dump_file)
-	{
-		fclose(m_dump_file);
-		m_dump_file = NULL;
-	}
+	cvDestroyWindow(m_url);
+	cvDestroyWindow("fps");
+
+	memset(m_url, 0, sizeof(m_url));
 
 	m_fps_info_vec.clear();
 }
@@ -266,30 +307,96 @@ void CIPCMDlg::OnBnClickedOpenUrl()
 	USES_CONVERSION;
 	strcpy_s(m_url, W2A(FilePathName));
 
-	m_capture_ffmpeg.open(W2A(FilePathName));
-	if (!m_capture_ffmpeg.isOpened())
+	if (m_bUseFFmpegCapture)
 	{
-		MessageBox(_T("´ò¿ªÊÓÆµÁ÷"), _T("´íÎó"), MB_ICONEXCLAMATION);
-		return;
+		m_capture_ffmpeg.open(W2A(FilePathName));
+		if (!m_capture_ffmpeg.isOpened())
+		{
+			MessageBox(_T("æ‰“å¼€è§†é¢‘æµé”™è¯¯"), _T("é”™è¯¯"), MB_ICONEXCLAMATION);
+			return;
+		}
 	}
-	//memset(&m_ff_packet, 0, sizeof(m_ff_packet));
-	//av_init_packet(&m_ff_packet);
+	else
+	{
+		//cvReleaseCapture(&saved);
+		
+		m_capture_opencv = cvCaptureFromFile(W2A(FilePathName));
+		if (!m_capture_opencv)
+		{
+			MessageBox(_T("æ‰“å¼€è§†é¢‘æµé”™è¯¯"), _T("é”™è¯¯"), MB_ICONEXCLAMATION);
+			return;
+		}
+	}
 
+	IPC_TRACE("open stream success\n");
 	SetStreamInfo();
 	m_quit_video_play = false;
-	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//¿ªÆôÏß³Ì
+	m_pThreadVideoPlay = AfxBeginThread(ThreadVideoPlay, this);//å¼€å¯çº¿ç¨‹
 
 	m_begine_time = time(NULL);
+	
+	m_fpsImage = cvCreateImage(cvSize(fps_window_width, fps_window_height), 8, 3);
+}
+
+
+void CIPCMDlg::OnBnClickedShowFps()
+{
+	if (m_pThreadVideoPlay == NULL)
+		return;
+		
 	if (m_bShowFpsSpline)
 	{
-		m_fpsImage = cvCreateImage(cvSize(fps_window_width, fps_window_height), 8, 3);
-		cvNamedWindow("fps");
+		m_bShowFpsSpline = false;
+		GetDlgItem(IDC_SHOW_FPS)->SetWindowText(_T("æ˜¾ç¤ºFPSæ›²çº¿"));
+		cvDestroyWindow("fps");
 	}
+	else
+	{
+		m_bShowFpsSpline = true;
+		GetDlgItem(IDC_SHOW_FPS)->SetWindowText(_T("å…³é—­FPSæ›²çº¿"));
+		cvNamedWindow("fps");// , CV_WINDOW_NORMAL | CV_WINDOW_KEEPRATIO);
+		
+		HWND hwnd_preview = (HWND)cvGetWindowHandle(m_url);
+		if (hwnd_preview)
+		{
+			RECT rect;
+			::GetWindowRect(hwnd_preview, &rect);
+
+			//int nScreenWidth, nScreenHeight;
+			//nScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+			//nScreenHeight = GetSystemMetrics(SM_CYSCREEN);
+			
+			cvMoveWindow("fps", rect.right, 0);
+		}
+	}
+}
+
+
+void CIPCMDlg::OnBnClickedPreview()
+{
+	if (m_pThreadVideoPlay == NULL)
+		return;
 
 	if (m_bPreview)
 	{
-		//m_previewImage = NULL;
-		cvNamedWindow(m_url);// , CV_WINDOW_NORMAL | CV_WINDOW_KEEPRATIO);
-							 //cvMoveWindow(g_url, 0, 0);
+		m_bPreview = false;
+		GetDlgItem(IDC_PREVIEW)->SetWindowText(_T("é¢„è§ˆ"));
+		cvDestroyWindow(m_url);
 	}
+	else
+	{
+		m_bPreview = true;
+		GetDlgItem(IDC_PREVIEW)->SetWindowText(_T("åœæ­¢é¢„è§ˆ"));
+		cvNamedWindow(m_url);// , CV_WINDOW_NORMAL | CV_WINDOW_KEEPRATIO);
+		cvMoveWindow(m_url, 0, 0);
+	}
+}
+
+
+BOOL CIPCMDlg::DestroyWindow()
+{
+	// TODO: Add your specialized code here and/or call the base class
+	SystemClear();
+
+	return CDialogEx::DestroyWindow();
 }

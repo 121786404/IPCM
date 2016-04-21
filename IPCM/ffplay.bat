@@ -1,0 +1,1 @@
+ffplay rtsp://127.0.0.1/fukua.264

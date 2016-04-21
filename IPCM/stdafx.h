@@ -76,3 +76,13 @@ extern "C"
 #endif
 
 
+#define IPC_TRACE(pszFormat, ...) do { \
+SYSTEMTIME tmSys; \
+GetLocalTime(&tmSys); \
+CTime tm3(tmSys); \
+TRACE(_T("%s.%03d "), \
+	tm3.Format(_T("%Y-%m-%d %H:%M:%S")), tmSys.wMilliseconds); \
+TRACE(pszFormat, __VA_ARGS__); \
+} while (0);
+
+
